@@ -1,11 +1,22 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import {
-  fetchAllWords, fetchTodayReviewWords, reviewWord, deleteWord,
-  type LeitnerWord, type WordStatus,
+  fetchWordsByStatus,
+  fetchTodayReviewWords,
+  reviewWord,
+  deleteWord,
+  type LeitnerWord,
 } from '@/lib/leitner';
 import {
-  Brain, Loader2, Trash2, BookOpen, CheckCircle2, RotateCcw,
-  ChevronRight, X, Check, ThumbsUp, ThumbsDown, Inbox,
+  Brain,
+  Loader2,
+  Trash2,
+  BookOpen,
+  CheckCircle2,
+  ChevronRight,
+  X,
+  ThumbsUp,
+  ThumbsDown,
+  Inbox,
 } from 'lucide-react';
 
 interface LeitnerPageProps {
@@ -14,12 +25,18 @@ interface LeitnerPageProps {
 
 type View = 'overview' | 'review';
 
-export default function LeitnerPage({ onNavigateToUpload }: LeitnerPageProps) {
+export default function LeitnerPage({
+  onNavigateToUpload: _onNavigateToUpload,
+}: LeitnerPageProps) {
   const [view, setView] = useState<View>('overview');
-  const [words, setWords] = useState<LeitnerWord[]>([]);
+
+  const [leitnerWords, setLeitnerWords] = useState<LeitnerWord[]>([]);
+  const [unlearnedWords, setUnlearnedWords] = useState<LeitnerWord[]>([]);
   const [reviewWords, setReviewWords] = useState<LeitnerWord[]>([]);
+
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+
   const [reviewIndex, setReviewIndex] = useState(0);
   const [revealed, setRevealed] = useState(false);
   const [reviewDone, setReviewDone] = useState(false);
@@ -27,63 +44,116 @@ export default function LeitnerPage({ onNavigateToUpload }: LeitnerPageProps) {
   const load = useCallback(async () => {
     setLoading(true);
     setError(null);
+
     try {
-      const [all, review] = await Promise.all([fetchAllWords(), fetchTodayReviewWords()]);
-      setWords(all);
+      const [leitner, unlearned, review] = await Promise.all([
+        fetchWordsByStatus('leitner'),
+        fetchWordsByStatus('unlearned'),
+        fetchTodayReviewWords(),
+      ]);
+
+      setLeitnerWords(leitner);
+      setUnlearnedWords(unlearned);
       setReviewWords(review);
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to load words.');
+      setError(
+        err instanceof Error ? err.message : 'Failed to load words.',
+      );
     } finally {
       setLoading(false);
     }
   }, []);
 
   useEffect(() => {
-    load();
+    void load();
   }, [load]);
 
-  const leitnerWords = words.filter((w) => w.status === 'leitner');
-  const learnedWords = words.filter((w) => w.status === 'learned');
-  const unlearnedWords = words.filter((w) => w.status === 'unlearned');
   const todayCount = reviewWords.length;
 
   const handleReview = async (remembered: boolean) => {
     const word = reviewWords[reviewIndex];
-    if (!word) return;
+
+    if (!word) {
+      return;
+    }
+
     try {
-      await reviewWord(word.id, remembered);
+      const updatedWord = await reviewWord(word.id, remembered);
+
+      if (updatedWord) {
+        setLeitnerWords((previousWords) => {
+          // The word graduated and is now learned.
+          // Remove it from the Leitner list without fetching learned words.
+          if (updatedWord.status !== 'leitner') {
+            return previousWords.filter(
+              (currentWord) => currentWord.id !== updatedWord.id,
+            );
+          }
+
+          return previousWords.map((currentWord) =>
+            currentWord.id === updatedWord.id
+              ? updatedWord
+              : currentWord,
+          );
+        });
+      }
+
       if (reviewIndex + 1 >= reviewWords.length) {
         setReviewDone(true);
-      } else {
-        setReviewIndex(reviewIndex + 1);
-        setRevealed(false);
+        return;
       }
+
+      setReviewIndex((previousIndex) => previousIndex + 1);
+      setRevealed(false);
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Review failed.');
+      setError(
+        err instanceof Error ? err.message : 'Review failed.',
+      );
     }
   };
 
   const handleDelete = async (id: string) => {
     try {
       await deleteWord(id);
-      setWords((prev) => prev.filter((w) => w.id !== id));
+
+      setLeitnerWords((previousWords) =>
+        previousWords.filter((word) => word.id !== id),
+      );
+
+      setUnlearnedWords((previousWords) =>
+        previousWords.filter((word) => word.id !== id),
+      );
+
+      setReviewWords((previousWords) =>
+        previousWords.filter((word) => word.id !== id),
+      );
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Delete failed.');
+      setError(
+        err instanceof Error ? err.message : 'Delete failed.',
+      );
     }
   };
 
   const startReview = () => {
-    if (reviewWords.length === 0) return;
+    if (reviewWords.length === 0) {
+      return;
+    }
+
     setView('review');
     setReviewIndex(0);
     setRevealed(false);
     setReviewDone(false);
   };
 
+  const exitReview = () => {
+    setView('overview');
+    void load();
+  };
+
   if (loading) {
     return (
       <div className="flex items-center justify-center py-20 text-slate-400">
-        <Loader2 className="w-6 h-6 animate-spin" />
+        <Loader2 className="h-6 w-6 animate-spin" />
       </div>
     );
   }
@@ -97,51 +167,70 @@ export default function LeitnerPage({ onNavigateToUpload }: LeitnerPageProps) {
         onReveal={() => setRevealed(true)}
         onReview={handleReview}
         done={reviewDone}
-        onExit={() => { setView('overview'); load(); }}
+        onExit={exitReview}
       />
     );
   }
 
   return (
-    <div className="max-w-3xl mx-auto px-4 sm:px-6 py-8">
+    <div className="mx-auto max-w-3xl px-4 py-8 sm:px-6">
       <div className="mb-8">
-        <h1 className="text-2xl font-bold text-slate-900 tracking-tight">Leitner System</h1>
-        <p className="text-sm text-slate-400 mt-1">Review words and track your progress.</p>
+        <h1 className="text-2xl font-bold tracking-tight text-slate-900">
+          Leitner System
+        </h1>
+
+        <p className="mt-1 text-sm text-slate-400">
+          Review words and track your progress.
+        </p>
       </div>
 
       {error && (
-        <div className="mb-5 rounded-xl bg-red-50 border border-red-200 px-4 py-3 text-sm text-red-700">
+        <div className="mb-5 rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
           {error}
         </div>
       )}
 
       {/* Today's review card */}
-      <div className={`rounded-2xl border p-5 mb-6 transition-all ${
-        todayCount > 0
-          ? 'border-amber-200 bg-gradient-to-br from-amber-50 to-white'
-          : 'border-slate-200 bg-white'
-      }`}>
+      <div
+        className={`mb-6 rounded-2xl border p-5 transition-all ${
+          todayCount > 0
+            ? 'border-amber-200 bg-gradient-to-br from-amber-50 to-white'
+            : 'border-slate-200 bg-white'
+        }`}
+      >
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-4">
-            <div className={`w-12 h-12 rounded-xl flex items-center justify-center ${
-              todayCount > 0 ? 'bg-amber-100 text-amber-600' : 'bg-slate-100 text-slate-400'
-            }`}>
-              <Brain className="w-6 h-6" />
+            <div
+              className={`flex h-12 w-12 items-center justify-center rounded-xl ${
+                todayCount > 0
+                  ? 'bg-amber-100 text-amber-600'
+                  : 'bg-slate-100 text-slate-400'
+              }`}
+            >
+              <Brain className="h-6 w-6" />
             </div>
+
             <div>
-              <p className="font-semibold text-slate-900">Today's Review</p>
+              <p className="font-semibold text-slate-900">
+                Today&apos;s Review
+              </p>
+
               <p className="text-sm text-slate-500">
-                {todayCount > 0 ? `${todayCount} word${todayCount > 1 ? 's' : ''} due` : 'No words due today'}
+                {todayCount > 0
+                  ? `${todayCount} word${todayCount === 1 ? '' : 's'} due`
+                  : 'No words due today'}
               </p>
             </div>
           </div>
+
           {todayCount > 0 && (
             <button
+              type="button"
               onClick={startReview}
-              className="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl bg-amber-600 text-white text-sm font-medium shadow-sm hover:bg-amber-700 transition-all"
+              className="inline-flex items-center gap-2 rounded-xl bg-amber-600 px-4 py-2.5 text-sm font-medium text-white shadow-sm transition-all hover:bg-amber-700"
             >
               Start Review
-              <ChevronRight className="w-4 h-4" />
+              <ChevronRight className="h-4 w-4" />
             </button>
           )}
         </div>
@@ -157,14 +246,7 @@ export default function LeitnerPage({ onNavigateToUpload }: LeitnerPageProps) {
           onDelete={handleDelete}
           onEmpty="No words in the Leitner system yet. Click words in the player to add them."
         />
-        <WordList
-          title="Learned"
-          icon={CheckCircle2}
-          color="emerald"
-          words={learnedWords}
-          onDelete={handleDelete}
-          onEmpty="No learned words yet. Words graduate here after mastering all 5 boxes."
-        />
+
         <WordList
           title="Unlearned"
           icon={Inbox}
@@ -178,9 +260,7 @@ export default function LeitnerPage({ onNavigateToUpload }: LeitnerPageProps) {
   );
 }
 
-function ReviewView({
-  words, index, revealed, onReveal, onReview, done, onExit,
-}: {
+interface ReviewViewProps {
   words: LeitnerWord[];
   index: number;
   revealed: boolean;
@@ -188,18 +268,36 @@ function ReviewView({
   onReview: (remembered: boolean) => void;
   done: boolean;
   onExit: () => void;
-}) {
+}
+
+function ReviewView({
+  words,
+  index,
+  revealed,
+  onReveal,
+  onReview,
+  done,
+  onExit,
+}: ReviewViewProps) {
   if (done) {
     return (
-      <div className="max-w-2xl mx-auto px-4 sm:px-6 py-20 text-center">
-        <div className="mx-auto w-16 h-16 rounded-2xl bg-emerald-100 flex items-center justify-center mb-4">
-          <CheckCircle2 className="w-8 h-8 text-emerald-600" />
+      <div className="mx-auto max-w-2xl px-4 py-20 text-center sm:px-6">
+        <div className="mx-auto mb-4 flex h-16 w-16 items-center justify-center rounded-2xl bg-emerald-100">
+          <CheckCircle2 className="h-8 w-8 text-emerald-600" />
         </div>
-        <h2 className="text-2xl font-bold text-slate-900 mb-2">All caught up!</h2>
-        <p className="text-slate-500 mb-6">You've reviewed all due words for today.</p>
+
+        <h2 className="mb-2 text-2xl font-bold text-slate-900">
+          All caught up!
+        </h2>
+
+        <p className="mb-6 text-slate-500">
+          You&apos;ve reviewed all due words for today.
+        </p>
+
         <button
+          type="button"
           onClick={onExit}
-          className="inline-flex items-center gap-2 px-5 py-2.5 rounded-xl bg-emerald-600 text-white text-sm font-medium shadow-sm hover:bg-emerald-700 transition-all"
+          className="inline-flex items-center gap-2 rounded-xl bg-emerald-600 px-5 py-2.5 text-sm font-medium text-white shadow-sm transition-all hover:bg-emerald-700"
         >
           Back to Leitner
         </button>
@@ -208,66 +306,93 @@ function ReviewView({
   }
 
   const word = words[index];
-  if (!word) return null;
-  const progress = ((index) / words.length) * 100;
+
+  if (!word) {
+    return null;
+  }
+
+  const progress = ((index + 1) / words.length) * 100;
 
   return (
-    <div className="max-w-2xl mx-auto px-4 sm:px-6 py-8">
+    <div className="mx-auto max-w-2xl px-4 py-8 sm:px-6">
       {/* Progress bar */}
-      <div className="flex items-center justify-between mb-6">
+      <div className="mb-6 flex items-center justify-between">
         <button
+          type="button"
           onClick={onExit}
-          className="p-2 rounded-lg text-slate-400 hover:bg-slate-100 hover:text-slate-600 transition-colors"
+          aria-label="Exit review"
+          className="rounded-lg p-2 text-slate-400 transition-colors hover:bg-slate-100 hover:text-slate-600"
         >
-          <X className="w-5 h-5" />
+          <X className="h-5 w-5" />
         </button>
-        <div className="flex-1 mx-4">
-          <div className="h-1.5 w-full bg-slate-200 rounded-full overflow-hidden">
+
+        <div className="mx-4 flex-1">
+          <div className="h-1.5 w-full overflow-hidden rounded-full bg-slate-200">
             <div
-              className="h-full bg-amber-500 rounded-full transition-all duration-300"
+              className="h-full rounded-full bg-amber-500 transition-all duration-300"
               style={{ width: `${progress}%` }}
             />
           </div>
         </div>
-        <span className="text-xs text-slate-400 font-mono">{index + 1}/{words.length}</span>
+
+        <span className="font-mono text-xs text-slate-400">
+          {index + 1}/{words.length}
+        </span>
       </div>
 
-      {/* Card */}
-      <div className="rounded-2xl border border-slate-200 bg-white shadow-sm p-8 text-center min-h-[280px] flex flex-col items-center justify-center">
+      {/* Review card */}
+      <div className="flex min-h-[280px] flex-col items-center justify-center rounded-2xl border border-slate-200 bg-white p-8 text-center shadow-sm">
         {!revealed ? (
           <>
-            <p className="text-sm text-slate-400 mb-4">Do you remember this word?</p>
-            <h2 className="text-4xl font-bold text-slate-900 mb-6 capitalize">{word.word}</h2>
+            <p className="mb-4 text-sm text-slate-400">
+              Do you remember this word?
+            </p>
+
+            <h2 className="mb-6 text-4xl font-bold capitalize text-slate-900">
+              {word.word}
+            </h2>
+
             <button
+              type="button"
               onClick={onReveal}
-              className="inline-flex items-center gap-2 px-5 py-2.5 rounded-xl bg-slate-800 text-white text-sm font-medium hover:bg-slate-900 transition-all"
+              className="inline-flex items-center gap-2 rounded-xl bg-slate-800 px-5 py-2.5 text-sm font-medium text-white transition-all hover:bg-slate-900"
             >
-              <BookOpen className="w-4 h-4" />
+              <BookOpen className="h-4 w-4" />
               Reveal Context
             </button>
           </>
         ) : (
           <>
-            <h2 className="text-4xl font-bold text-slate-900 mb-4 capitalize">{word.word}</h2>
+            <h2 className="mb-4 text-4xl font-bold capitalize text-slate-900">
+              {word.word}
+            </h2>
+
             {word.sentence && (
-              <p className="text-slate-600 text-base leading-relaxed mb-2 max-w-lg">
-                "{word.sentence}"
+              <p className="mb-2 max-w-lg text-base leading-relaxed text-slate-600">
+                &ldquo;{word.sentence}&rdquo;
               </p>
             )}
-            <p className="text-xs text-slate-400 mb-6">Box {word.box} of 5</p>
+
+            <p className="mb-6 text-xs text-slate-400">
+              Box {word.box} of 5
+            </p>
+
             <div className="flex gap-3">
               <button
+                type="button"
                 onClick={() => onReview(false)}
-                className="inline-flex items-center gap-2 px-5 py-2.5 rounded-xl bg-red-50 text-red-600 text-sm font-medium border border-red-200 hover:bg-red-100 transition-all"
+                className="inline-flex items-center gap-2 rounded-xl border border-red-200 bg-red-50 px-5 py-2.5 text-sm font-medium text-red-600 transition-all hover:bg-red-100"
               >
-                <ThumbsDown className="w-4 h-4" />
+                <ThumbsDown className="h-4 w-4" />
                 Forgot
               </button>
+
               <button
+                type="button"
                 onClick={() => onReview(true)}
-                className="inline-flex items-center gap-2 px-5 py-2.5 rounded-xl bg-emerald-50 text-emerald-600 text-sm font-medium border border-emerald-200 hover:bg-emerald-100 transition-all"
+                className="inline-flex items-center gap-2 rounded-xl border border-emerald-200 bg-emerald-50 px-5 py-2.5 text-sm font-medium text-emerald-600 transition-all hover:bg-emerald-100"
               >
-                <ThumbsUp className="w-4 h-4" />
+                <ThumbsUp className="h-4 w-4" />
                 Remembered
               </button>
             </div>
@@ -278,62 +403,95 @@ function ReviewView({
   );
 }
 
-function WordList({
-  title, icon: Icon, color, words, onDelete, onEmpty,
-}: {
+interface WordListProps {
   title: string;
   icon: typeof Brain;
-  color: 'amber' | 'emerald' | 'slate';
+  color: 'amber' | 'slate';
   words: LeitnerWord[];
   onDelete: (id: string) => void;
   onEmpty: string;
-}) {
+}
+
+function WordList({
+  title,
+  icon: Icon,
+  color,
+  words,
+  onDelete,
+  onEmpty,
+}: WordListProps) {
   const colorMap = {
-    amber: { bg: 'bg-amber-50', text: 'text-amber-600', badge: 'bg-amber-100 text-amber-700' },
-    emerald: { bg: 'bg-emerald-50', text: 'text-emerald-600', badge: 'bg-emerald-100 text-emerald-700' },
-    slate: { bg: 'bg-slate-100', text: 'text-slate-500', badge: 'bg-slate-100 text-slate-600' },
+    amber: {
+      text: 'text-amber-600',
+      badge: 'bg-amber-100 text-amber-700',
+    },
+    slate: {
+      text: 'text-slate-500',
+      badge: 'bg-slate-100 text-slate-600',
+    },
   }[color];
 
   return (
     <div>
-      <div className="flex items-center gap-2 mb-3">
-        <Icon className={`w-5 h-5 ${colorMap.text}`} />
-        <h3 className="font-semibold text-slate-800">{title}</h3>
-        <span className={`text-xs font-medium px-2 py-0.5 rounded-full ${colorMap.badge}`}>
+      <div className="mb-3 flex items-center gap-2">
+        <Icon className={`h-5 w-5 ${colorMap.text}`} />
+
+        <h3 className="font-semibold text-slate-800">
+          {title}
+        </h3>
+
+        <span
+          className={`rounded-full px-2 py-0.5 text-xs font-medium ${colorMap.badge}`}
+        >
           {words.length}
         </span>
       </div>
 
       {words.length === 0 ? (
-        <p className="text-sm text-slate-400 pl-7">{onEmpty}</p>
+        <p className="pl-7 text-sm text-slate-400">
+          {onEmpty}
+        </p>
       ) : (
         <div className="space-y-2">
-          {words.map((w) => (
+          {words.map((word) => (
             <div
-              key={w.id}
-              className="group flex items-start justify-between gap-3 rounded-xl border border-slate-200 bg-white p-3 hover:border-slate-300 transition-all"
+              key={word.id}
+              className="group flex items-start justify-between gap-3 rounded-xl border border-slate-200 bg-white p-3 transition-all hover:border-slate-300"
             >
               <div className="min-w-0 flex-1">
-                <p className="font-medium text-slate-800 capitalize">{w.word}</p>
-                {w.sentence && (
-                  <p className="text-xs text-slate-400 mt-0.5 line-clamp-2">"{w.sentence}"</p>
+                <p className="font-medium capitalize text-slate-800">
+                  {word.word}
+                </p>
+
+                {word.sentence && (
+                  <p className="mt-0.5 line-clamp-2 text-xs text-slate-400">
+                    &ldquo;{word.sentence}&rdquo;
+                  </p>
                 )}
-                {w.status === 'leitner' && (
-                  <div className="flex items-center gap-2 mt-1.5">
-                    <span className={`text-xs px-1.5 py-0.5 rounded ${colorMap.badge}`}>
-                      Box {w.box}/5
+
+                {word.status === 'leitner' && (
+                  <div className="mt-1.5 flex items-center gap-2">
+                    <span
+                      className={`rounded px-1.5 py-0.5 text-xs ${colorMap.badge}`}
+                    >
+                      Box {word.box}/5
                     </span>
+
                     <span className="text-xs text-slate-400">
-                      Next: {new Date(w.next_review).toLocaleDateString()}
+                      Next:{' '}
+                      {new Date(word.next_review).toLocaleDateString()}
                     </span>
                   </div>
                 )}
               </div>
+
               <button
-                onClick={() => onDelete(w.id)}
-                className="p-1.5 rounded-lg text-slate-300 hover:bg-red-50 hover:text-red-500 transition-colors opacity-0 group-hover:opacity-100 shrink-0"
+                type="button"
+                onClick={() => onDelete(word.id)}
+                aria-label={`Delete ${word.word}`}
+                className="shrink-0 rounded-lg p-1.5 text-slate-300 opacity-0 transition-colors hover:bg-red-50 hover:text-red-500 group-hover:opacity-100"
               >
-                <Trash2 className="w-4 h-4" />
+                <Trash2 className="h-4 w-4" />
               </button>
             </div>
           ))}

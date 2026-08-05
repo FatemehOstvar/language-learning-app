@@ -175,30 +175,69 @@ export async function fetchWordMap(): Promise<Map<string, LeitnerWord>> {
 }
 
 export async function markWordsAsLearned(
-  words: { word: string; sentence: string }[],
+  words: { word: string }[],
 ): Promise<void> {
   const today = new Date().toISOString().split('T')[0];
-  for (const { word, sentence } of words) {
-    const cleanWord = normalizeWord(word);
-    if (!cleanWord) continue;
 
-    const { data: existing } = await supabase
+  const uniqueWords = [
+    ...new Set(
+      words
+        .map(({ word }) => normalizeWord(word))
+        .filter((word): word is string => Boolean(word)),
+    ),
+  ];
+
+  for (const cleanWord of uniqueWords) {
+    const { data: existing, error: selectError } = await supabase
       .from('leitner_words')
       .select('id, status')
       .eq('word', cleanWord)
       .maybeSingle();
 
+    if (selectError) {
+      throw selectError;
+    }
+
     if (existing) {
-      if (existing.status !== 'learned') {
-        await supabase
-          .from('leitner_words')
-          .update({ status: 'learned', sentence, box: 5, last_reviewed: today })
-          .eq('id', existing.id);
+      // Do not modify known/learned or Leitner words.
+      if (
+        existing.status === 'learned' ||
+        existing.status === 'leitner'
+      ) {
+        continue;
       }
-    } else {
-      await supabase
+
+      // The record exists but is still considered unknown.
+      const { error: updateError } = await supabase
         .from('leitner_words')
-        .insert({ word: cleanWord, sentence, status: 'learned', box: 5, last_reviewed: today });
+        .update({
+          status: 'learned',
+          sentence: null,
+          box: 5,
+          last_reviewed: today,
+        })
+        .eq('id', existing.id);
+
+      if (updateError) {
+        throw updateError;
+      }
+
+      continue;
+    }
+
+    // No record means the word is currently unknown.
+    const { error: insertError } = await supabase
+      .from('leitner_words')
+      .insert({
+        word: cleanWord,
+        sentence: null,
+        status: 'learned',
+        box: 5,
+        last_reviewed: today,
+      });
+
+    if (insertError) {
+      throw insertError;
     }
   }
 }
