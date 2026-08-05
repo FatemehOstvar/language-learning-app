@@ -49,10 +49,10 @@ function getWordClass(
 ): string {
   const clean = normalizeWord(word);
   const entry = wordMap.get(clean);
-  if (!entry) return 'bg-blue-100 text-slate-700';
-  if (entry.status === 'learned') return 'text-slate-300';
-  if (entry.status === 'leitner') return 'bg-amber-200 text-amber-900 font-medium';
-  return 'bg-blue-100 text-slate-700';
+  if (!entry) return 'bg-blue-100 text-gray-950';
+  if (entry.status === 'learned') return 'text-gray-950';
+  if (entry.status === 'leitner') return 'bg-amber-200 text-gray-950 font-medium';
+  return 'bg-blue-100 text-gray-950';
 }
 
 /* ── Text-only reader ─────────────────────────────────────────── */
@@ -96,7 +96,7 @@ function TextReader({ media }: { media: MediaFile }) {
   const handleMarkAllLearned = async () => {
     setMarkingAll(true);
     try {
-      const wordList = sentences.map((s) => ({ word: s.text, sentence: s.text }));
+      const wordList = sentences.map((s) => ({ word: s.text }));
       await markWordsAsLearned(wordList);
       await fetchWordMap().then(setWordMap);
       setAllMarked(true);
@@ -182,8 +182,8 @@ function TextReader({ media }: { media: MediaFile }) {
       </div>
 
       <div className="h-20" />
-
-      {popup && (
+TODO : pop up differrently for learned words or leitner words popup.word?
+      {popup &&  (
         <WordPopup
           word={popup.word}
           sentence={popup.sentence}
