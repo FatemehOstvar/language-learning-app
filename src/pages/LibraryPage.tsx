@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
-import { supabase, type MediaFile } from '@/lib/supabase';
-import { formatTime } from '@/lib/formatTime';
-import { parseSrt } from '@/lib/srtParser';
+import { supabase, type MediaFile } from '@/shared/api/supabase';
+import { formatTime } from '@/shared/utils/formatTime';
+import { parseSrt } from '@/shared/utils/srtParser';
 import { Library, Headphones, Trash2, Loader2, FileText, BookOpen } from 'lucide-react';
 
 interface LibraryPageProps {

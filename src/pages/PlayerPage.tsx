@@ -1,11 +1,11 @@
 import type { ReactNode } from 'react';
-import type { MediaFile } from '@/lib/supabase';
-import { FocusModeButton } from '@/components/FocusModeButton';
-import { useFocusMode } from '@/lib/useFocusMode';
-import { AudioDocumentLesson } from '@/components/AudioDocumentLesson';
-import { AudioLesson } from '@/components/AudioLesson';
-import { DocumentLesson } from '@/components/DocumentLesson';
-import { TextLesson } from '@/components/TextLesson';
+import type { MediaFile } from '@/shared/api/supabase';
+import { FocusModeToggle } from '@/features/player/components/FocusModeToggle';
+import { useFocusMode } from '@/features/player/hooks/useFocusMode';
+import { AudioDocumentLesson } from '@/features/player/components/AudioDocumentLesson';
+import { AudioLesson } from '@/features/player/components/AudioLesson';
+import { DocumentLesson } from '@/features/player/components/DocumentLesson';
+import { TextLesson } from '@/features/player/components/TextLesson';
 
 interface PlayerPageProps {
   media: MediaFile | null;
@@ -50,7 +50,7 @@ export default function PlayerPage({ media }: PlayerPageProps) {
           : 'relative'
       }
     >
-      <FocusModeButton active={focusMode} onToggle={toggleFocusMode} />
+      <FocusModeToggle active={focusMode} onToggle={toggleFocusMode} />
       {lesson}
     </div>
   );

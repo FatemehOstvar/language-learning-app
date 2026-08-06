@@ -1,10 +1,10 @@
 import { useState } from 'react';
-import Nav, { type Page } from '@/components/Nav';
+import AppNavigation, { type Page } from '@/components/layout/AppNavigation';
 import UploadPage from '@/pages/UploadPage';
 import PlayerPage from '@/pages/PlayerPage';
 import LibraryPage from '@/pages/LibraryPage';
 import LeitnerPage from '@/pages/LeitnerPage';
-import type { MediaFile } from '@/lib/supabase';
+import type { MediaFile } from '@/shared/api/supabase';
 
 function App() {
   const [page, setPage] = useState<Page>('upload');
@@ -12,7 +12,7 @@ function App() {
 
   return (
     <div className="min-h-screen bg-slate-50">
-      <Nav
+      <AppNavigation
         current={page}
         onNavigate={setPage}
         hasActiveMedia={activeMedia !== null}

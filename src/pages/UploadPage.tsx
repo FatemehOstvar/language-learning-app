@@ -1,8 +1,8 @@
-import LessonTypeSidebar from '@/components/LessonTypeSidebar';
-import UploadLessonForm from '@/components/UploadLessonForm';
-import UploadPageHeader from '@/components/UploadPageHeader';
-import { useUploadForm } from '@/lib/useUploadForm';
-import type { UploadPageProps } from '@/lib/uploadTypes';
+import LessonTypeSelector from '@/features/upload/components/LessonTypeSelector';
+import LessonUploadForm from '@/features/upload/components/LessonUploadForm';
+import UploadHeader from '@/features/upload/components/UploadHeader';
+import { useUploadForm } from '@/features/upload/hooks/useUploadForm';
+import type { UploadPageProps } from '@/features/upload/model/types';
 
 export default function UploadPage({
   onUploaded,
@@ -12,15 +12,15 @@ export default function UploadPage({
 
   return (
     <div className="mx-auto max-w-5xl px-4 py-10 sm:px-6 lg:py-14">
-      <UploadPageHeader />
+      <UploadHeader />
 
       <div className="grid gap-8 lg:grid-cols-[250px_minmax(0,1fr)]">
-        <LessonTypeSidebar
+        <LessonTypeSelector
           activeTab={form.tab}
           onChange={form.handleTabChange}
         />
 
-        <UploadLessonForm form={form} onGoToPlayer={onGoToPlayer} />
+        <LessonUploadForm form={form} onGoToPlayer={onGoToPlayer} />
       </div>
     </div>
   );
