@@ -6,6 +6,7 @@ export interface LeitnerWord {
   id: string;
   word: string;
   sentence: string | null;
+  note: string | null;
   status: WordStatus;
   box: number;
   next_review: string;
@@ -58,9 +59,12 @@ export async function upsertWord(
   word: string,
   sentence: string,
   status: WordStatus,
+  note?: string | null,
 ): Promise<LeitnerWord | null> {
   const cleanWord = normalizeWord(word);
   if (!cleanWord) return null;
+
+  const cleanNote = note?.trim() || null;
 
   // Check if the word already exists
   const { data: existing } = await supabase
@@ -75,6 +79,12 @@ export async function upsertWord(
       status,
       sentence,
     };
+
+    // Only change the note when the caller explicitly provides one.
+    // This preserves an existing Leitner note when only the status changes.
+    if (note !== undefined) {
+      update.note = cleanNote;
+    }
     if (status === 'leitner') {
       update.box = 1;
       update.next_review = new Date().toISOString().split('T')[0];
@@ -92,6 +102,7 @@ export async function upsertWord(
   const insert: Record<string, unknown> = {
     word: cleanWord,
     sentence,
+    note: cleanNote,
     status,
   };
   if (status === 'leitner') {

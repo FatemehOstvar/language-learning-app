@@ -17,6 +17,7 @@ import {
   ThumbsUp,
   ThumbsDown,
   Inbox,
+  StickyNote,
 } from 'lucide-react';
 
 interface LeitnerPageProps {
@@ -373,6 +374,15 @@ function ReviewView({
               </p>
             )}
 
+            {word.note && (
+              <div className="mb-4 flex max-w-lg items-start gap-2 rounded-xl bg-amber-50 px-3 py-2.5 text-left">
+                <StickyNote className="mt-0.5 h-4 w-4 shrink-0 text-amber-600" />
+                <p className="whitespace-pre-wrap text-sm leading-5 text-amber-950">
+                  {word.note}
+                </p>
+              </div>
+            )}
+
             <p className="mb-6 text-xs text-slate-400">
               Box {word.box} of 5
             </p>
@@ -467,6 +477,13 @@ function WordList({
                   <p className="mt-0.5 line-clamp-2 text-xs text-slate-400">
                     &ldquo;{word.sentence}&rdquo;
                   </p>
+                )}
+
+                {word.note && (
+                  <div className="mt-1.5 flex items-start gap-1.5 text-xs leading-5 text-slate-600">
+                    <StickyNote className="mt-0.5 h-3.5 w-3.5 shrink-0 text-amber-500" />
+                    <p className="line-clamp-2 whitespace-pre-wrap">{word.note}</p>
+                  </div>
                 )}
 
                 {word.status === 'leitner' && (

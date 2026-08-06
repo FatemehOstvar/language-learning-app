@@ -1,15 +1,11 @@
+import { useEffect, useMemo, useRef, useState } from 'react';
 import {
-  useCallback,
-  useEffect,
-  useLayoutEffect,
-  useRef,
-  useState,
-} from 'react';
-import {
-  Check,
-  X,
-  BookPlus,
+  Brain,
+  CheckCircle2,
+  Inbox,
   Loader2,
+  StickyNote,
+  X,
 } from 'lucide-react';
 import {
   normalizeWord,
@@ -23,21 +19,34 @@ interface WordPopupProps {
   x: number;
   y: number;
   onClose: () => void;
-  onSaved: (
-    word: string,
-    status: WordStatus,
-  ) => void;
+  onSaved: (word: string, status: WordStatus) => void;
 }
 
-interface PopupPosition {
-  left: number;
-  top: number;
-  ready: boolean;
-}
-
-const VIEWPORT_GAP = 16;
-const ANCHOR_GAP = 8;
-const POPUP_WIDTH = 280;
+const STATUS_OPTIONS: Array<{
+  value: WordStatus;
+  label: string;
+  description: string;
+  icon: typeof Brain;
+}> = [
+  {
+    value: 'leitner',
+    label: 'Add to Leitner',
+    description: 'Review this word with spaced repetition.',
+    icon: Brain,
+  },
+  {
+    value: 'unlearned',
+    label: 'Unlearned',
+    description: 'Keep it marked as an unknown word.',
+    icon: Inbox,
+  },
+  {
+    value: 'learned',
+    label: 'Learned',
+    description: 'Mark this word as already known.',
+    icon: CheckCircle2,
+  },
+];
 
 export default function WordPopup({
   word,
@@ -48,320 +57,191 @@ export default function WordPopup({
   onSaved,
 }: WordPopupProps) {
   const popupRef = useRef<HTMLDivElement>(null);
-  const closeTimeoutRef =
-    useRef<number | null>(null);
+  const [status, setStatus] = useState<WordStatus>('leitner');
+  const [note, setNote] = useState('');
+  const [saving, setSaving] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
-  const [saving, setSaving] =
-    useState<WordStatus | null>(null);
-  const [saved, setSaved] =
-    useState<WordStatus | null>(null);
-
-  const [position, setPosition] =
-    useState<PopupPosition>({
-      left: 0,
-      top: 0,
-      ready: false,
-    });
-
-  const cleanWord = normalizeWord(word);
-
-  const updatePosition = useCallback(() => {
-    const popup = popupRef.current;
-
-    if (!popup) {
-      return;
-    }
-
-    const {
-      width: popupWidth,
-      height: popupHeight,
-    } = popup.getBoundingClientRect();
-
-    const maximumLeft = Math.max(
-      VIEWPORT_GAP,
-      window.innerWidth -
-        popupWidth -
-        VIEWPORT_GAP,
-    );
-
-    const maximumTop = Math.max(
-      VIEWPORT_GAP,
-      window.innerHeight -
-        popupHeight -
-        VIEWPORT_GAP,
-    );
-
-    const left = Math.min(
-      Math.max(x, VIEWPORT_GAP),
-      maximumLeft,
-    );
-
-    const availableSpaceBelow =
-      window.innerHeight - y - VIEWPORT_GAP;
-
-    const shouldOpenAbove =
-      availableSpaceBelow < popupHeight;
-
-    const preferredTop = shouldOpenAbove
-      ? y - popupHeight - ANCHOR_GAP
-      : y;
-
-    const top = Math.min(
-      Math.max(preferredTop, VIEWPORT_GAP),
-      maximumTop,
-    );
-
-    setPosition({
-      left,
-      top,
-      ready: true,
-    });
-  }, [x, y]);
-
-  /*
-   * Measure and position the popup before the browser paints it.
-   * This prevents the initial visible jump.
-   */
-  useLayoutEffect(() => {
-    setPosition((current) => ({
-      ...current,
-      ready: false,
-    }));
-
-    updatePosition();
-  }, [updatePosition, saved]);
-
-  /*
-   * Keep the popup inside the viewport if the window changes size.
-   */
-  useEffect(() => {
-    const handleViewportChange = () => {
-      updatePosition();
-    };
-
-    window.addEventListener(
-      'resize',
-      handleViewportChange,
-    );
-
-    return () => {
-      window.removeEventListener(
-        'resize',
-        handleViewportChange,
-      );
-    };
-  }, [updatePosition]);
+  const cleanWord = useMemo(() => normalizeWord(word), [word]);
 
   useEffect(() => {
-    const handleClickOutside = (
-      event: MouseEvent,
-    ) => {
-      const popup = popupRef.current;
-
-      if (
-        popup &&
-        !popup.contains(event.target as Node)
-      ) {
+    const handlePointerDown = (event: PointerEvent) => {
+      if (!popupRef.current?.contains(event.target as Node)) {
         onClose();
       }
     };
 
-    const handleEscape = (
-      event: KeyboardEvent,
-    ) => {
+    const handleKeyDown = (event: KeyboardEvent) => {
       if (event.key === 'Escape') {
         onClose();
       }
     };
 
-    document.addEventListener(
-      'mousedown',
-      handleClickOutside,
-    );
-
-    document.addEventListener(
-      'keydown',
-      handleEscape,
-    );
+    window.addEventListener('pointerdown', handlePointerDown);
+    window.addEventListener('keydown', handleKeyDown);
 
     return () => {
-      document.removeEventListener(
-        'mousedown',
-        handleClickOutside,
-      );
-
-      document.removeEventListener(
-        'keydown',
-        handleEscape,
-      );
+      window.removeEventListener('pointerdown', handlePointerDown);
+      window.removeEventListener('keydown', handleKeyDown);
     };
   }, [onClose]);
 
-  useEffect(() => {
-    return () => {
-      if (closeTimeoutRef.current !== null) {
-        window.clearTimeout(
-          closeTimeoutRef.current,
-        );
-      }
-    };
-  }, []);
+  const position = useMemo(() => {
+    const width = 340;
+    const margin = 12;
 
-  const handleAction = async (
-    status: WordStatus,
-  ) => {
-    if (saving !== null) {
+    return {
+      left: Math.max(margin, Math.min(x, window.innerWidth - width - margin)),
+      top: Math.max(margin, Math.min(y, window.innerHeight - 420)),
+      width,
+    };
+  }, [x, y]);
+
+  const handleSave = async () => {
+    if (!cleanWord || saving) {
       return;
     }
 
-    setSaving(status);
+    setSaving(true);
+    setError(null);
 
     try {
       await upsertWord(
-        word,
+        cleanWord,
         sentence,
         status,
+        status === 'leitner' ? note : undefined,
       );
 
-      setSaved(status);
       onSaved(cleanWord, status);
-
-      closeTimeoutRef.current =
-        window.setTimeout(() => {
-          onClose();
-        }, 800);
-    } catch (error) {
-      console.error(
-        'Failed to save word:',
-        error,
+      onClose();
+    } catch (saveError) {
+      setError(
+        saveError instanceof Error
+          ? saveError.message
+          : 'The word could not be saved.',
       );
-
-      setSaving(null);
+    } finally {
+      setSaving(false);
     }
   };
-
-  const options: {
-    status: WordStatus;
-    label: string;
-    icon: typeof Check;
-    className: string;
-  }[] = [
-    {
-      status: 'leitner',
-      label: 'Add to Leitner',
-      icon: BookPlus,
-      className:
-        'hover:border-amber-300 hover:bg-amber-50 hover:text-amber-700',
-    },
-    {
-      status: 'learned',
-      label: 'I already know this',
-      icon: Check,
-      className:
-        'hover:border-emerald-300 hover:bg-emerald-50 hover:text-emerald-700',
-    },
-    {
-      status: 'unlearned',
-      label: "Don't learn this word",
-      icon: X,
-      className:
-        'hover:border-slate-300 hover:bg-slate-50 hover:text-slate-600',
-    },
-  ];
 
   return (
     <div
       ref={popupRef}
       role="dialog"
       aria-modal="false"
-      aria-label={`Learning options for ${cleanWord}`}
-      className={`
-        fixed z-50 rounded-2xl border border-slate-200
-        bg-white p-4 shadow-xl
-        transition-opacity duration-100
-        ${
-          position.ready
-            ? 'opacity-100'
-            : 'pointer-events-none opacity-0'
-        }
-      `}
-      style={{
-        left: position.left,
-        top: position.top,
-        width: `min(${POPUP_WIDTH}px, calc(100vw - ${
-          VIEWPORT_GAP * 2
-        }px))`,
-        visibility: position.ready
-          ? 'visible'
-          : 'hidden',
-      }}
+      aria-labelledby="word-popup-title"
+      style={position}
+      className="fixed z-[100] max-w-[calc(100vw-24px)] overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-2xl"
     >
-      <button
-        type="button"
-        onClick={onClose}
-        aria-label="Close popup"
-        className="
-          absolute right-3 top-3 rounded-lg p-1
-          text-slate-400 transition-colors
-          hover:bg-slate-100 hover:text-slate-700
-        "
-      >
-        <X className="h-4 w-4" />
-      </button>
-
-      <p className="mb-1 pr-7 text-sm font-medium text-slate-400">
-        Do you want to learn this word?
-      </p>
-
-      <p className="mb-3 text-lg font-bold capitalize text-slate-900">
-        {cleanWord}
-      </p>
-
-      {saved ? (
-        <div className="flex items-center gap-2 py-3 text-sm font-medium text-emerald-600">
-          <Check className="h-5 w-5" />
-          Saved
+      <div className="flex items-start justify-between gap-4 border-b border-slate-100 px-4 py-3">
+        <div className="min-w-0">
+          <p
+            id="word-popup-title"
+            className="truncate text-lg font-semibold text-slate-900"
+          >
+            {cleanWord || word}
+          </p>
+          <p className="mt-0.5 line-clamp-2 text-xs leading-5 text-slate-500">
+            {sentence}
+          </p>
         </div>
-      ) : (
-        <div className="space-y-2">
-          {options.map((option) => {
+
+        <button
+          type="button"
+          onClick={onClose}
+          aria-label="Close word popup"
+          className="shrink-0 rounded-lg p-1.5 text-slate-400 transition hover:bg-slate-100 hover:text-slate-700"
+        >
+          <X className="h-4 w-4" />
+        </button>
+      </div>
+
+      <div className="space-y-4 p-4">
+        <div className="grid gap-2">
+          {STATUS_OPTIONS.map((option) => {
             const Icon = option.icon;
-            const isSaving =
-              saving === option.status;
+            const selected = status === option.value;
 
             return (
               <button
-                key={option.status}
+                key={option.value}
                 type="button"
-                onClick={() =>
-                  void handleAction(
-                    option.status,
-                  )
-                }
-                disabled={saving !== null}
-                className={`
-                  flex w-full items-center gap-2.5
-                  rounded-xl border border-slate-200
-                  px-3 py-2.5 text-left text-sm
-                  font-medium text-slate-700
-                  transition-colors
-                  disabled:cursor-not-allowed
-                  disabled:opacity-50
-                  ${option.className}
-                `}
+                onClick={() => {
+                  setStatus(option.value);
+                  setError(null);
+                }}
+                aria-pressed={selected}
+                className={`flex items-start gap-3 rounded-xl border px-3 py-2.5 text-left transition ${
+                  selected
+                    ? 'border-emerald-300 bg-emerald-50'
+                    : 'border-slate-200 hover:border-slate-300 hover:bg-slate-50'
+                }`}
               >
-                {isSaving ? (
-                  <Loader2 className="h-4 w-4 animate-spin" />
-                ) : (
-                  <Icon className="h-4 w-4" />
-                )}
-
-                {option.label}
+                <Icon
+                  className={`mt-0.5 h-4 w-4 shrink-0 ${
+                    selected ? 'text-emerald-700' : 'text-slate-400'
+                  }`}
+                />
+                <span className="min-w-0">
+                  <span
+                    className={`block text-sm font-medium ${
+                      selected ? 'text-emerald-900' : 'text-slate-800'
+                    }`}
+                  >
+                    {option.label}
+                  </span>
+                  <span className="mt-0.5 block text-xs leading-4 text-slate-500">
+                    {option.description}
+                  </span>
+                </span>
               </button>
             );
           })}
         </div>
-      )}
+
+        {status === 'leitner' && (
+          <div>
+            <label
+              htmlFor="leitner-note"
+              className="mb-1.5 flex items-center gap-1.5 text-xs font-semibold text-slate-700"
+            >
+              <StickyNote className="h-3.5 w-3.5 text-slate-400" />
+              Note <span className="font-normal text-slate-400">(optional)</span>
+            </label>
+            <textarea
+              id="leitner-note"
+              value={note}
+              onChange={(event) => setNote(event.target.value)}
+              placeholder="Meaning, translation, grammar hint, mnemonic…"
+              rows={3}
+              maxLength={1000}
+              autoFocus
+              className="w-full resize-y rounded-xl border border-slate-200 px-3 py-2.5 text-sm leading-5 text-slate-900 outline-none transition placeholder:text-slate-400 focus:border-emerald-400 focus:ring-4 focus:ring-emerald-100"
+            />
+            <p className="mt-1 text-right text-[10px] text-slate-400">
+              {note.length}/1000
+            </p>
+          </div>
+        )}
+
+        {error && (
+          <p role="alert" className="text-xs leading-5 text-red-600">
+            {error}
+          </p>
+        )}
+
+        <button
+          type="button"
+          onClick={handleSave}
+          disabled={saving || !cleanWord}
+          className="inline-flex w-full items-center justify-center gap-2 rounded-xl bg-slate-900 px-4 py-2.5 text-sm font-semibold text-white transition hover:bg-slate-800 disabled:cursor-not-allowed disabled:opacity-50"
+        >
+          {saving && <Loader2 className="h-4 w-4 animate-spin" />}
+          {saving ? 'Saving…' : 'Save word'}
+        </button>
+      </div>
     </div>
   );
 }
