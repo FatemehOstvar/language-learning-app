@@ -1,6 +1,6 @@
 import { ArrowRight, CheckCircle2 } from 'lucide-react';
 
-interface UploadSuccessBannerProps {
+interface UploadSuccessNoticeProps {
   visible: boolean;
   onOpenLesson: () => void;
 }
@@ -8,27 +8,22 @@ interface UploadSuccessBannerProps {
 export default function UploadSuccessNotice({
   visible,
   onOpenLesson,
-}: UploadSuccessBannerProps) {
-  if (!visible) return null;
+}: UploadSuccessNoticeProps) {
+  if (!visible) {
+    return null;
+  }
 
   return (
-    <div className="flex flex-col gap-4 rounded-2xl border border-emerald-200 bg-emerald-50 px-4 py-4 sm:flex-row sm:items-center sm:justify-between">
-      <div className="flex items-start gap-3">
-        <CheckCircle2 className="mt-0.5 h-5 w-5 shrink-0 text-emerald-600" />
-        <div>
-          <p className="text-sm font-semibold text-emerald-900">
-            Lesson created
-          </p>
-          <p className="mt-1 text-sm text-emerald-700">
-            Your lesson is ready to open.
-          </p>
-        </div>
+    <div className="flex flex-col gap-3 rounded-xl border border-emerald-200 bg-emerald-50/70 px-3.5 py-3 sm:flex-row sm:items-center sm:justify-between">
+      <div className="flex items-center gap-2 text-sm text-emerald-900">
+        <CheckCircle2 className="h-4 w-4 shrink-0 text-emerald-600" />
+        <span>Lesson created successfully.</span>
       </div>
 
       <button
         type="button"
         onClick={onOpenLesson}
-        className="inline-flex items-center justify-center gap-2 rounded-xl border border-emerald-300 bg-white px-4 py-2 text-sm font-semibold text-emerald-700 transition hover:bg-emerald-100"
+        className="inline-flex items-center gap-1.5 self-start text-sm font-medium text-emerald-800 transition hover:text-emerald-950 sm:self-auto"
       >
         Open lesson
         <ArrowRight className="h-4 w-4" />

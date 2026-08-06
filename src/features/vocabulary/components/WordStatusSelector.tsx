@@ -2,6 +2,7 @@ import {
   Brain,
   CheckCircle2,
   Inbox,
+  Loader2,
   type LucideIcon,
 } from 'lucide-react';
 import type { WordStatus } from '@/features/vocabulary/api/leitner';
@@ -9,77 +10,75 @@ import type { WordStatus } from '@/features/vocabulary/api/leitner';
 interface StatusOption {
   value: WordStatus;
   label: string;
-  description: string;
+  shortcut: string;
   icon: LucideIcon;
 }
 
 const STATUS_OPTIONS: StatusOption[] = [
   {
     value: 'leitner',
-    label: 'Add to Leitner',
-    description: 'Review this word with spaced repetition.',
+    label: 'Leitner',
+    shortcut: 'A',
     icon: Brain,
   },
   {
     value: 'unlearned',
     label: 'Unlearned',
-    description: 'Keep it marked as an unknown word.',
+    shortcut: 'S',
     icon: Inbox,
   },
   {
     value: 'learned',
     label: 'Learned',
-    description: 'Mark this word as already known.',
+    shortcut: 'D',
     icon: CheckCircle2,
   },
 ];
 
 interface WordStatusSelectorProps {
-  value: WordStatus;
-  onChange: (status: WordStatus) => void;
+  savingStatus: WordStatus | null;
+  disabled: boolean;
+  onSelect: (status: WordStatus) => void | Promise<void>;
 }
 
 export default function WordStatusSelector({
-  value,
-  onChange,
+  savingStatus,
+  disabled,
+  onSelect,
 }: WordStatusSelectorProps) {
   return (
-    <div className="grid gap-2">
+    <div
+      className="grid gap-1"
+      role="group"
+      aria-label="Save word status"
+    >
       {STATUS_OPTIONS.map((option) => {
         const Icon = option.icon;
-        const selected = value === option.value;
+        const saving = savingStatus === option.value;
 
         return (
           <button
             key={option.value}
             type="button"
-            onClick={() => onChange(option.value)}
-            aria-pressed={selected}
-            className={`flex items-start gap-3 rounded-xl border px-3 py-2.5 text-left transition ${
-              selected
-                ? 'border-emerald-300 bg-emerald-50'
-                : 'border-slate-200 hover:border-slate-300 hover:bg-slate-50'
-            }`}
+            disabled={disabled}
+            onClick={() => {
+              void onSelect(option.value);
+            }}
+            className="flex h-9 items-center gap-2 rounded-lg border border-slate-200 px-2 text-left text-slate-800 transition hover:border-emerald-300 hover:bg-emerald-50 hover:text-emerald-900 disabled:cursor-not-allowed disabled:opacity-50"
           >
-            <Icon
-              className={`mt-0.5 h-4 w-4 shrink-0 ${
-                selected ? 'text-emerald-700' : 'text-slate-400'
-              }`}
-            />
+            {saving ? (
+              <Loader2 className="h-3.5 w-3.5 shrink-0 animate-spin text-emerald-600" />
+            ) : (
+              <Icon className="h-3.5 w-3.5 shrink-0 text-slate-400" />
+            )}
 
-            <span className="min-w-0">
-              <span
-                className={`block text-sm font-medium ${
-                  selected ? 'text-emerald-900' : 'text-slate-800'
-                }`}
-              >
-                {option.label}
-              </span>
-
-              <span className="mt-0.5 block text-xs leading-4 text-slate-500">
-                {option.description}
-              </span>
+            <span className="min-w-0 flex-1 truncate text-xs font-semibold">
+              {option.label}
             </span>
+
+            <kbd className="rounded border border-slate-200 bg-slate-50 px-1.5 py-0.5 text-[10px] font-semibold text-slate-500">
+              {option.shortcut}
+            </kbd>
           </button>
         );
       })}

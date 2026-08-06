@@ -1,7 +1,7 @@
-import { Loader2 } from 'lucide-react';
+import { AlertCircle, Loader2 } from 'lucide-react';
 import type { UploadTab } from '@/features/upload/model/types';
 
-interface UploadStatusProps {
+interface UploadProgressProps {
   tab: UploadTab;
   uploading: boolean;
   progress: number;
@@ -15,43 +15,42 @@ export default function UploadProgress({
   progress,
   message,
   error,
-}: UploadStatusProps) {
+}: UploadProgressProps) {
   return (
     <>
       {error && (
         <div
           role="alert"
-          className="rounded-2xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700"
+          className="flex items-start gap-2 rounded-xl border border-red-200 bg-red-50 px-3.5 py-3 text-sm text-red-700"
         >
-          {error}
+          <AlertCircle className="mt-0.5 h-4 w-4 shrink-0" />
+          <span>{error}</span>
         </div>
       )}
 
-      {uploading && tab !== 'textbox' && (
-        <div className="rounded-2xl border border-slate-200 bg-slate-50 p-4">
-          <div className="mb-3 flex items-center justify-between gap-4">
-            <div className="flex items-center gap-2 text-sm font-medium text-slate-700">
-              <Loader2 className="h-4 w-4 animate-spin text-emerald-600" />
-              {message || 'Uploading…'}
+      {uploading && (
+        <div className="rounded-xl border border-slate-200 bg-slate-50 px-3.5 py-3">
+          <div className="flex items-center justify-between gap-4 text-xs">
+            <div className="flex items-center gap-2 font-medium text-slate-600">
+              <Loader2 className="h-3.5 w-3.5 animate-spin" />
+              {message || (tab === 'textbox' ? 'Creating lesson…' : 'Uploading…')}
             </div>
-            <span className="font-mono text-xs text-slate-500">
-              {progress}%
-            </span>
+
+            {tab !== 'textbox' && (
+              <span className="tabular-nums text-slate-400">
+                {progress}%
+              </span>
+            )}
           </div>
 
-          <div className="h-2 overflow-hidden rounded-full bg-slate-200">
-            <div
-              className="h-full rounded-full bg-emerald-600 transition-[width] duration-200"
-              style={{ width: `${progress}%` }}
-            />
-          </div>
-        </div>
-      )}
-
-      {uploading && tab === 'textbox' && (
-        <div className="flex items-center gap-2 rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm text-slate-600">
-          <Loader2 className="h-4 w-4 animate-spin text-emerald-600" />
-          {message || 'Creating lesson…'}
+          {tab !== 'textbox' && (
+            <div className="mt-2 h-1 overflow-hidden rounded-full bg-slate-200">
+              <div
+                className="h-full rounded-full bg-emerald-500 transition-[width] duration-200"
+                style={{ width: `${progress}%` }}
+              />
+            </div>
+          )}
         </div>
       )}
     </>

@@ -1,10 +1,7 @@
 import { createClient } from '@supabase/supabase-js';
 
-const supabaseUrl =
-  import.meta.env.VITE_SUPABASE_URL;
-
-const supabaseAnonKey =
-  import.meta.env.VITE_SUPABASE_ANON_KEY;
+const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
+const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY;
 
 if (!supabaseUrl || !supabaseAnonKey) {
   throw new Error(
@@ -27,27 +24,33 @@ export type DocumentType =
   | 'pdf'
   | 'epub';
 
+export interface LibraryFolder {
+  id: string;
+  name: string;
+  sort_order: number;
+  created_at: string;
+}
+
 export interface MediaFile {
   id: string;
   title: string;
   media_type: MediaType;
 
-  // Used by all lessons containing audio
   audio_url: string | null;
   audio_filename: string | null;
 
-  // Used by audio + SRT lessons
   srt_content: string | null;
   srt_filename: string | null;
 
-  // Used by pasted-text lessons
   content: string | null;
   source_filename: string | null;
 
-  // Used by PDF and EPUB lessons
   document_url: string | null;
   document_filename: string | null;
   document_type: DocumentType | null;
+
+  folder_id: string | null;
+  sort_order: number;
 
   created_at: string;
 }

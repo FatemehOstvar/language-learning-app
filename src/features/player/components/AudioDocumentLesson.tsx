@@ -1,6 +1,6 @@
 import { AudioTransportControls } from '@/features/player/components/AudioTransportControls';
 import { DocumentLessonHeader } from '@/features/player/components/DocumentLessonHeader';
-import { DocumentViewer } from '@/features/player/components/DocumentViewer';
+import { DocumentStudyLesson } from '@/features/player/components/DocumentStudyLesson';
 import { useAudioPlayback } from '@/features/player/hooks/useAudioPlayback';
 import type { PlayerLessonProps } from '@/features/player/model/types';
 
@@ -14,7 +14,7 @@ export function AudioDocumentLesson({
     <div
       className={
         focusMode
-          ? 'min-h-screen bg-white pb-[38px]'
+          ? 'min-h-screen bg-white pb-[42px]'
           : 'min-h-screen bg-slate-50 pb-[42px]'
       }
     >
@@ -29,31 +29,22 @@ export function AudioDocumentLesson({
         className="hidden"
       />
 
-      <div
-        className={
-          focusMode
-            ? 'h-[calc(100vh-38px)]'
-            : 'mx-auto max-w-7xl px-4 py-6 sm:px-6'
-        }
-      >
-        {!focusMode && (
+      {!focusMode && (
+        <div className="mx-auto max-w-3xl px-4 pt-8 sm:px-6">
           <DocumentLessonHeader
             media={media}
-            description="Listen to the audio while following the companion document."
+            description="Listen to the audio while studying the companion document."
           />
-        )}
+        </div>
+      )}
 
-        <DocumentViewer
-          media={media}
-          className={
-            focusMode
-              ? 'h-full min-h-0 rounded-none border-0 shadow-none'
-              : 'h-[calc(100vh-13rem)] min-h-[580px]'
-          }
-        />
-      </div>
+      <DocumentStudyLesson
+        media={media}
+        focusMode
+        controlsBottomClassName="bottom-14"
+      />
 
-      <div className="fixed inset-x-0 bottom-0 z-40 border-t border-slate-200 bg-white/90 backdrop-blur-xl">
+      <div className="fixed inset-x-0 bottom-0 z-50 border-t border-slate-200 bg-white/90 backdrop-blur-xl">
         <div className="mx-auto max-w-5xl px-1 py-[3px]">
           <AudioTransportControls
             currentTime={playback.currentTime}

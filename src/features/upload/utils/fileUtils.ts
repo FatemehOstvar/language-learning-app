@@ -2,6 +2,7 @@ import type { RefObject } from 'react';
 import {
   AUDIO_EXTENSIONS,
   DOCUMENT_EXTENSIONS,
+  SUBTITLE_EXTENSIONS,
 } from '@/features/upload/config/uploadConfig';
 import type { UploadDocumentType } from '@/features/upload/model/types';
 
@@ -22,6 +23,10 @@ export function isAudioFile(file: File): boolean {
 
 export function isDocumentFile(file: File): boolean {
   return DOCUMENT_EXTENSIONS.has(getFileExtension(file.name));
+}
+
+export function isSubtitleFile(file: File): boolean {
+  return SUBTITLE_EXTENSIONS.has(getFileExtension(file.name));
 }
 
 export function getDocumentType(file: File): UploadDocumentType {

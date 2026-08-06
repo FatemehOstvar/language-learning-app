@@ -1,12 +1,14 @@
 import AudioDocumentFields from '@/features/upload/components/AudioDocumentFields';
+import AudioSubtitleFields from '@/features/upload/components/AudioSubtitleFields';
+import DocumentLessonFields from '@/features/upload/components/DocumentLessonFields';
 import LessonTitleField from '@/features/upload/components/LessonTitleField';
+import TextLessonFields from '@/features/upload/components/TextLessonFields';
 import UploadFormFooter from '@/features/upload/components/UploadFormFooter';
 import UploadProgress from '@/features/upload/components/UploadProgress';
 import UploadSuccessNotice from '@/features/upload/components/UploadSuccessNotice';
 import type { useUploadForm } from '@/features/upload/hooks/useUploadForm';
-import DocumentLessonFields from '@/features/upload/components/DocumentLessonFields';
-import TextLessonFields from '@/features/upload/components/TextLessonFields';
-interface UploadLessonFormProps {
+
+interface LessonUploadFormProps {
   form: ReturnType<typeof useUploadForm>;
   onGoToPlayer: () => void;
 }
@@ -14,23 +16,17 @@ interface UploadLessonFormProps {
 export default function LessonUploadForm({
   form,
   onGoToPlayer,
-}: UploadLessonFormProps) {
-
+}: LessonUploadFormProps) {
   return (
-    <main className="overflow-hidden rounded-3xl border border-slate-200 bg-white shadow-sm">
-      <div className="border-b border-slate-200 px-6 py-5 sm:px-8">
-        <p className="text-sm font-semibold text-slate-900">Lesson details</p>
-        <p className="mt-1 text-sm text-slate-500">
-          Add a clear title and choose the lesson files.
-        </p>
-      </div>
-
-      <div className="space-y-7 px-6 py-7 sm:px-8">
+    <main className="overflow-hidden rounded-2xl border border-slate-200 bg-white">
+      <div className="space-y-6 p-5 sm:p-6">
         <LessonTitleField
           value={form.lessonTitle}
           disabled={form.uploading}
           onChange={form.handleTitleChange}
         />
+
+        <div className="h-px bg-slate-100" />
 
         {form.tab === 'audio-document' && (
           <AudioDocumentFields
@@ -44,6 +40,22 @@ export default function LessonUploadForm({
             onCompanionFile={form.handleCompanionFile}
             onRemoveAudio={form.removeAudioFile}
             onRemoveCompanion={form.removeCompanionFile}
+            onDraggingChange={form.setDragging}
+          />
+        )}
+
+        {form.tab === 'audio-subtitle' && (
+          <AudioSubtitleFields
+            audioFile={form.audioFile}
+            subtitleFile={form.subtitleFile}
+            dragging={form.dragging}
+            disabled={form.uploading}
+            audioInputRef={form.audioInputRef}
+            subtitleInputRef={form.subtitleInputRef}
+            onAudioFile={form.handleAudioFile}
+            onSubtitleFile={form.handleSubtitleFile}
+            onRemoveAudio={form.removeAudioFile}
+            onRemoveSubtitle={form.removeSubtitleFile}
             onDraggingChange={form.setDragging}
           />
         )}

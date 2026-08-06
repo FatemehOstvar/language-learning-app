@@ -25,16 +25,16 @@ export default function DocumentLessonFields({
 }: DocumentLessonFieldsProps) {
   return (
     <section>
-      <div className="mb-4">
-        <p className="text-sm font-semibold text-slate-800">Lesson document</p>
-        <p className="mt-1 text-sm text-slate-500">
-          Upload the PDF or EPUB that students will read.
+      <div className="mb-3">
+        <h2 className="text-sm font-medium text-slate-800">Document</h2>
+        <p className="mt-1 text-xs leading-5 text-slate-500">
+          Upload the PDF or EPUB you want to study.
         </p>
       </div>
 
       <FileDropzone
         label="PDF or EPUB"
-        description="The original document will be preserved"
+        description="The original file is preserved"
         icon={BookOpen}
         accent="amber"
         file={file}

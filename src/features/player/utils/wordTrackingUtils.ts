@@ -14,11 +14,13 @@ export function getWordClass(
     return 'bg-amber-200 text-gray-950 font-medium';
   }
 
-  if (entry?.status === 'unlearned') {
-    return 'bg-blue-100 text-gray-950';
+  if (entry?.status === 'learned') {
+    return 'text-gray-950';
   }
 
-  return 'text-gray-950';
+  // A word with no database record has never been marked as known.
+  // Treat it as unknown, just like an explicitly unlearned word.
+  return 'bg-blue-100 text-gray-950';
 }
 
 export function extractWordsFromSentences(

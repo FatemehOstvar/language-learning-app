@@ -10,9 +10,11 @@ import {
   getFileTitle,
   isAudioFile,
   isDocumentFile,
+  isSubtitleFile,
 } from '@/features/upload/utils/fileUtils';
 import {
   createAudioDocumentLesson,
+  createAudioSubtitleLesson,
   createDocumentLesson,
   createTextLesson,
 } from '@/features/upload/services/lessonUploadService';
@@ -30,6 +32,7 @@ export function useUploadForm({ onUploaded }: UseUploadFormOptions) {
   const [lessonTitle, setLessonTitle] = useState('');
   const [audioFile, setAudioFile] = useState<File | null>(null);
   const [companionFile, setCompanionFile] = useState<File | null>(null);
+  const [subtitleFile, setSubtitleFile] = useState<File | null>(null);
   const [documentFile, setDocumentFile] = useState<File | null>(null);
   const [textBoxContent, setTextBoxContent] = useState('');
   const [dragging, setDragging] = useState<DragTarget>(null);
@@ -41,6 +44,7 @@ export function useUploadForm({ onUploaded }: UseUploadFormOptions) {
 
   const audioInputRef = useRef<HTMLInputElement>(null);
   const companionInputRef = useRef<HTMLInputElement>(null);
+  const subtitleInputRef = useRef<HTMLInputElement>(null);
   const documentInputRef = useRef<HTMLInputElement>(null);
 
   const wordCount = useMemo(
@@ -107,6 +111,18 @@ export function useUploadForm({ onUploaded }: UseUploadFormOptions) {
     [resetMessages],
   );
 
+  const handleSubtitleFile = useCallback(
+    (file: File) => {
+      resetMessages();
+      if (!isSubtitleFile(file)) {
+        setError('Please select an SRT or WebVTT subtitle file.');
+        return;
+      }
+      setSubtitleFile(file);
+    },
+    [resetMessages],
+  );
+
   const handleDocumentFile = useCallback(
     (file: File) => {
       resetMessages();
@@ -133,6 +149,12 @@ export function useUploadForm({ onUploaded }: UseUploadFormOptions) {
     resetMessages();
   }, [resetMessages]);
 
+  const removeSubtitleFile = useCallback(() => {
+    setSubtitleFile(null);
+    clearFileInput(subtitleInputRef);
+    resetMessages();
+  }, [resetMessages]);
+
   const removeDocumentFile = useCallback(() => {
     setDocumentFile(null);
     clearFileInput(documentInputRef);
@@ -143,18 +165,21 @@ export function useUploadForm({ onUploaded }: UseUploadFormOptions) {
     setLessonTitle('');
     setAudioFile(null);
     setCompanionFile(null);
+    setSubtitleFile(null);
     setDocumentFile(null);
     setTextBoxContent('');
     setProgress(0);
     setProgressMessage('');
     clearFileInput(audioInputRef);
     clearFileInput(companionInputRef);
+    clearFileInput(subtitleInputRef);
     clearFileInput(documentInputRef);
   }, []);
 
   const canSubmit = useMemo(() => {
     if (uploading || !lessonTitle.trim()) return false;
     if (tab === 'audio-document') return Boolean(audioFile && companionFile);
+    if (tab === 'audio-subtitle') return Boolean(audioFile && subtitleFile);
     if (tab === 'document') return Boolean(documentFile);
     return Boolean(textBoxContent.trim());
   }, [
@@ -163,6 +188,7 @@ export function useUploadForm({ onUploaded }: UseUploadFormOptions) {
     tab,
     audioFile,
     companionFile,
+    subtitleFile,
     documentFile,
     textBoxContent,
   ]);
@@ -197,6 +223,20 @@ export function useUploadForm({ onUploaded }: UseUploadFormOptions) {
           onProgress: setProgress,
           onMessage: setProgressMessage,
         });
+      } else if (tab === 'audio-subtitle') {
+        if (!audioFile || !subtitleFile) {
+          throw new Error(
+            'Please select both an audio file and an SRT or WebVTT subtitle file.',
+          );
+        }
+
+        lesson = await createAudioSubtitleLesson({
+          title,
+          audioFile,
+          subtitleFile,
+          onProgress: setProgress,
+          onMessage: setProgressMessage,
+        });
       } else if (tab === 'document') {
         if (!documentFile) {
           throw new Error('Please select a PDF or EPUB file.');
@@ -224,11 +264,38 @@ export function useUploadForm({ onUploaded }: UseUploadFormOptions) {
       resetForm();
       setSuccess(true);
     } catch (uploadError) {
-      setError(
-        uploadError instanceof Error
-          ? uploadError.message
-          : 'The lesson could not be created.',
-      );
+      console.error('Lesson creation failed:', uploadError);
+
+      if (uploadError instanceof Error) {
+        setError(uploadError.message);
+      } else if (typeof uploadError === 'object' && uploadError !== null) {
+        const errorRecord = uploadError as Record<string, unknown>;
+        const parts = [
+          errorRecord.message,
+          errorRecord.details,
+          errorRecord.hint,
+        ].filter(
+          (value): value is string =>
+            typeof value === 'string' && value.trim().length > 0,
+        );
+
+        const code =
+          typeof errorRecord.code === 'string'
+            ? errorRecord.code.trim()
+            : '';
+
+        setError(
+          `${code ? `[${code}] ` : ''}${
+            parts.join(' — ') || 'The lesson could not be created.'
+          }`,
+        );
+      } else {
+        setError(
+          typeof uploadError === 'string' && uploadError.trim()
+            ? uploadError
+            : 'The lesson could not be created.',
+        );
+      }
     } finally {
       setUploading(false);
       setProgressMessage('');
@@ -238,6 +305,7 @@ export function useUploadForm({ onUploaded }: UseUploadFormOptions) {
     tab,
     audioFile,
     companionFile,
+    subtitleFile,
     documentFile,
     textBoxContent,
     onUploaded,
@@ -249,6 +317,7 @@ export function useUploadForm({ onUploaded }: UseUploadFormOptions) {
     lessonTitle,
     audioFile,
     companionFile,
+    subtitleFile,
     documentFile,
     textBoxContent,
     dragging,
@@ -261,6 +330,7 @@ export function useUploadForm({ onUploaded }: UseUploadFormOptions) {
     canSubmit,
     audioInputRef,
     companionInputRef,
+    subtitleInputRef,
     documentInputRef,
     setDragging,
     handleTabChange,
@@ -268,9 +338,11 @@ export function useUploadForm({ onUploaded }: UseUploadFormOptions) {
     handleTextChange,
     handleAudioFile,
     handleCompanionFile,
+    handleSubtitleFile,
     handleDocumentFile,
     removeAudioFile,
     removeCompanionFile,
+    removeSubtitleFile,
     removeDocumentFile,
     handleSubmit,
   };

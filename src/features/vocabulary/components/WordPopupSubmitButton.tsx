@@ -3,7 +3,7 @@ import { Loader2 } from 'lucide-react';
 interface WordPopupSaveButtonProps {
   saving: boolean;
   disabled: boolean;
-  onClick: () => void;
+  onClick: () => void | Promise<void>;
 }
 
 export default function WordPopupSubmitButton({
@@ -14,12 +14,19 @@ export default function WordPopupSubmitButton({
   return (
     <button
       type="button"
-      onClick={onClick}
+      onClick={() => {
+        void onClick();
+      }}
       disabled={saving || disabled}
-      className="inline-flex w-full items-center justify-center gap-2 rounded-xl bg-slate-900 px-4 py-2.5 text-sm font-semibold text-white transition hover:bg-slate-800 disabled:cursor-not-allowed disabled:opacity-50"
+      className="inline-flex h-8 items-center justify-center gap-2 rounded-lg bg-slate-900 px-3 text-xs font-semibold text-white transition hover:bg-slate-800 disabled:cursor-not-allowed disabled:opacity-50"
     >
-      {saving && <Loader2 className="h-4 w-4 animate-spin" />}
-      {saving ? 'Saving…' : 'Save word'}
+      {saving && <Loader2 className="h-3.5 w-3.5 animate-spin" />}
+      <span>{saving ? 'Saving…' : 'Save'}</span>
+      {!saving && (
+        <kbd className="rounded border border-white/20 bg-white/10 px-1.5 py-0.5 text-[10px]">
+          Ctrl+S
+        </kbd>
+      )}
     </button>
   );
 }

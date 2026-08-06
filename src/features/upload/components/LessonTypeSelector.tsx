@@ -1,13 +1,13 @@
 import {
   BookOpen,
+  Captions,
   Headphones,
   PenLine,
-  ShieldCheck,
   type LucideIcon,
 } from 'lucide-react';
 import type { UploadTab } from '@/features/upload/model/types';
 
-interface LessonTypeSidebarProps {
+interface LessonTypeSelectorProps {
   activeTab: UploadTab;
   onChange: (tab: UploadTab) => void;
 }
@@ -20,20 +20,26 @@ const LESSON_TYPES: Array<{
 }> = [
   {
     id: 'audio-document',
-    label: 'Audio lesson',
-    description: 'Audio with a PDF or EPUB',
+    label: 'Audio + document',
+    description: 'PDF or EPUB',
     icon: Headphones,
   },
   {
+    id: 'audio-subtitle',
+    label: 'Audio + subtitles',
+    description: 'SRT or WebVTT',
+    icon: Captions,
+  },
+  {
     id: 'document',
-    label: 'Document lesson',
-    description: 'PDF or EPUB without audio',
+    label: 'Document',
+    description: 'PDF or EPUB',
     icon: BookOpen,
   },
   {
     id: 'textbox',
-    label: 'Text lesson',
-    description: 'Write or paste lesson text',
+    label: 'Text',
+    description: 'Write or paste',
     icon: PenLine,
   },
 ];
@@ -41,71 +47,46 @@ const LESSON_TYPES: Array<{
 export default function LessonTypeSelector({
   activeTab,
   onChange,
-}: LessonTypeSidebarProps) {
+}: LessonTypeSelectorProps) {
   return (
-    <aside>
-      <p className="mb-3 px-1 text-xs font-semibold uppercase tracking-wider text-slate-400">
-        Lesson type
-      </p>
+    <div
+      role="tablist"
+      aria-label="Lesson type"
+      className="grid grid-cols-2 gap-1 rounded-xl border border-slate-200 bg-slate-100/80 p-1 sm:grid-cols-4"
+    >
+      {LESSON_TYPES.map(({ id, label, description, icon: Icon }) => {
+        const active = activeTab === id;
 
-      <div className="space-y-2">
-        {LESSON_TYPES.map(({ id, label, description, icon: Icon }) => {
-          const active = activeTab === id;
-
-          return (
-            <button
-              key={id}
-              type="button"
-              onClick={() => onChange(id)}
-              className={`w-full rounded-2xl border p-4 text-left transition-all ${
-                active
-                  ? 'border-emerald-300 bg-emerald-50 shadow-sm'
-                  : 'border-transparent hover:border-slate-200 hover:bg-white'
+        return (
+          <button
+            key={id}
+            type="button"
+            role="tab"
+            aria-selected={active}
+            onClick={() => onChange(id)}
+            className={`flex min-w-0 items-center justify-center gap-2 rounded-lg px-3 py-2.5 text-left transition ${
+              active
+                ? 'bg-white text-slate-950 shadow-sm ring-1 ring-slate-200'
+                : 'text-slate-500 hover:bg-white/60 hover:text-slate-800'
+            }`}
+          >
+            <Icon
+              className={`h-4 w-4 shrink-0 ${
+                active ? 'text-emerald-600' : 'text-slate-400'
               }`}
-            >
-              <div className="flex items-start gap-3">
-                <div
-                  className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-xl ${
-                    active
-                      ? 'bg-emerald-600 text-white'
-                      : 'bg-slate-100 text-slate-500'
-                  }`}
-                >
-                  <Icon className="h-5 w-5" />
-                </div>
+            />
 
-                <div>
-                  <p
-                    className={`text-sm font-semibold ${
-                      active ? 'text-emerald-950' : 'text-slate-800'
-                    }`}
-                  >
-                    {label}
-                  </p>
-                  <p className="mt-1 text-xs leading-5 text-slate-500">
-                    {description}
-                  </p>
-                </div>
-              </div>
-            </button>
-          );
-        })}
-      </div>
-
-      <div className="mt-6 rounded-2xl border border-slate-200 bg-white p-4">
-        <div className="flex items-start gap-3">
-          <ShieldCheck className="mt-0.5 h-5 w-5 shrink-0 text-emerald-600" />
-          <div>
-            <p className="text-sm font-semibold text-slate-800">
-              Original files preserved
-            </p>
-            <p className="mt-1 text-xs leading-5 text-slate-500">
-              PDF and EPUB files are uploaded directly without converting or
-              flattening their contents.
-            </p>
-          </div>
-        </div>
-      </div>
-    </aside>
+            <span className="min-w-0">
+              <span className="block truncate text-sm font-medium">
+                {label}
+              </span>
+              <span className="hidden truncate text-[11px] leading-4 text-slate-400 sm:block">
+                {description}
+              </span>
+            </span>
+          </button>
+        );
+      })}
+    </div>
   );
 }

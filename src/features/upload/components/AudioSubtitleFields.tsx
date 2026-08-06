@@ -1,45 +1,47 @@
 import type { RefObject } from 'react';
-import { FileAudio, FileText } from 'lucide-react';
+import { Captions, FileAudio } from 'lucide-react';
 import FileDropzone from '@/features/upload/components/FileDropzone';
 import {
   AUDIO_ACCEPT,
-  DOCUMENT_ACCEPT,
+  SUBTITLE_ACCEPT,
 } from '@/features/upload/config/uploadConfig';
 import type { DragTarget } from '@/features/upload/model/types';
 
-interface AudioDocumentFieldsProps {
+interface AudioSubtitleFieldsProps {
   audioFile: File | null;
-  companionFile: File | null;
+  subtitleFile: File | null;
   dragging: DragTarget;
   disabled: boolean;
   audioInputRef: RefObject<HTMLInputElement>;
-  companionInputRef: RefObject<HTMLInputElement>;
+  subtitleInputRef: RefObject<HTMLInputElement>;
   onAudioFile: (file: File) => void;
-  onCompanionFile: (file: File) => void;
+  onSubtitleFile: (file: File) => void;
   onRemoveAudio: () => void;
-  onRemoveCompanion: () => void;
+  onRemoveSubtitle: () => void;
   onDraggingChange: (target: DragTarget) => void;
 }
 
-export default function AudioDocumentFields({
+export default function AudioSubtitleFields({
   audioFile,
-  companionFile,
+  subtitleFile,
   dragging,
   disabled,
   audioInputRef,
-  companionInputRef,
+  subtitleInputRef,
   onAudioFile,
-  onCompanionFile,
+  onSubtitleFile,
   onRemoveAudio,
-  onRemoveCompanion,
+  onRemoveSubtitle,
   onDraggingChange,
-}: AudioDocumentFieldsProps) {
+}: AudioSubtitleFieldsProps) {
   return (
     <section>
-      <SectionHeading
-        title="Files"
-        description="Add the audio and its companion document."
-      />
+      <div className="mb-3">
+        <h2 className="text-sm font-medium text-slate-800">Files</h2>
+        <p className="mt-1 text-xs leading-5 text-slate-500">
+          Add the audio and its timed subtitle file.
+        </p>
+      </div>
 
       <div className="grid gap-3 sm:grid-cols-2">
         <FileDropzone
@@ -60,37 +62,22 @@ export default function AudioDocumentFields({
         />
 
         <FileDropzone
-          label="Companion document"
-          description="PDF or EPUB"
-          icon={FileText}
-          accent="violet"
-          file={companionFile}
-          dragging={dragging === 'companion'}
+          label="Subtitle file"
+          description="SRT or WebVTT"
+          icon={Captions}
+          accent="amber"
+          file={subtitleFile}
+          dragging={dragging === 'subtitle'}
           disabled={disabled}
-          inputRef={companionInputRef}
-          accept={DOCUMENT_ACCEPT}
-          onFile={onCompanionFile}
-          onRemove={onRemoveCompanion}
+          inputRef={subtitleInputRef}
+          accept={SUBTITLE_ACCEPT}
+          onFile={onSubtitleFile}
+          onRemove={onRemoveSubtitle}
           onDraggingChange={(active) =>
-            onDraggingChange(active ? 'companion' : null)
+            onDraggingChange(active ? 'subtitle' : null)
           }
         />
       </div>
     </section>
-  );
-}
-
-function SectionHeading({
-  title,
-  description,
-}: {
-  title: string;
-  description: string;
-}) {
-  return (
-    <div className="mb-3">
-      <h2 className="text-sm font-medium text-slate-800">{title}</h2>
-      <p className="mt-1 text-xs leading-5 text-slate-500">{description}</p>
-    </div>
   );
 }

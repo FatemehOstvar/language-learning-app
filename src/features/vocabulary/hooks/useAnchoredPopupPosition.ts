@@ -1,21 +1,85 @@
-import { useMemo, type CSSProperties } from 'react';
+import {
+  useEffect,
+  useMemo,
+  useState,
+  type CSSProperties,
+} from 'react';
 
-const POPUP_WIDTH = 340;
-const POPUP_ESTIMATED_HEIGHT = 420;
-const VIEWPORT_MARGIN = 12;
+const VIEWPORT_MARGIN = 8;
+const MAX_POPUP_WIDTH = 440;
+const MAX_POPUP_HEIGHT = 360;
+
+interface ViewportMetrics {
+  width: number;
+  height: number;
+  offsetLeft: number;
+  offsetTop: number;
+}
+
+function readViewport(): ViewportMetrics {
+  const visualViewport = window.visualViewport;
+
+  if (visualViewport) {
+    return {
+      width: visualViewport.width,
+      height: visualViewport.height,
+      offsetLeft: visualViewport.offsetLeft,
+      offsetTop: visualViewport.offsetTop,
+    };
+  }
+
+  return {
+    width: window.innerWidth,
+    height: window.innerHeight,
+    offsetLeft: 0,
+    offsetTop: 0,
+  };
+}
 
 export function useWordPopupPosition(
   x: number,
   y: number,
 ): CSSProperties {
+  const [viewport, setViewport] =
+    useState<ViewportMetrics>(readViewport);
+
+  useEffect(() => {
+    const update = () => setViewport(readViewport());
+    const visualViewport = window.visualViewport;
+
+    window.addEventListener('resize', update);
+    window.addEventListener('orientationchange', update);
+    visualViewport?.addEventListener('resize', update);
+    visualViewport?.addEventListener('scroll', update);
+
+    return () => {
+      window.removeEventListener('resize', update);
+      window.removeEventListener('orientationchange', update);
+      visualViewport?.removeEventListener('resize', update);
+      visualViewport?.removeEventListener('scroll', update);
+    };
+  }, []);
+
   return useMemo(() => {
-    const maxLeft = window.innerWidth - POPUP_WIDTH - VIEWPORT_MARGIN;
-    const maxTop = window.innerHeight - POPUP_ESTIMATED_HEIGHT;
+    void x;
+    void y;
+
+    const availableWidth = Math.max(
+      240,
+      viewport.width - VIEWPORT_MARGIN * 2,
+    );
+    const availableHeight = Math.max(
+      220,
+      viewport.height - VIEWPORT_MARGIN * 2,
+    );
 
     return {
-      left: Math.max(VIEWPORT_MARGIN, Math.min(x, maxLeft)),
-      top: Math.max(VIEWPORT_MARGIN, Math.min(y, maxTop)),
-      width: POPUP_WIDTH,
+      left: viewport.offsetLeft + viewport.width / 2,
+      top: viewport.offsetTop + viewport.height / 2,
+      width: Math.min(MAX_POPUP_WIDTH, availableWidth),
+      maxWidth: availableWidth,
+      maxHeight: Math.min(MAX_POPUP_HEIGHT, availableHeight),
+      transform: 'translate(-50%, -50%)',
     };
-  }, [x, y]);
+  }, [viewport, x, y]);
 }

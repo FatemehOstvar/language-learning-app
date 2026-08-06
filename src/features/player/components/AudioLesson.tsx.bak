@@ -37,7 +37,6 @@ export function AudioLesson({ media, focusMode }: PlayerLessonProps) {
 
   useAutoFollow({
     enabled: autoScroll,
-    isPlaying: playback.isPlaying,
     activeIndex,
     activeRef,
   });

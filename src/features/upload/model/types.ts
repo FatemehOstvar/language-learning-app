@@ -1,7 +1,16 @@
 import type { MediaFile } from '@/shared/api/supabase';
 
-export type UploadTab = 'audio-document' | 'document' | 'textbox';
-export type DragTarget = 'audio' | 'companion' | 'document' | null;
+export type UploadTab =
+  | 'audio-document'
+  | 'audio-subtitle'
+  | 'document'
+  | 'textbox';
+export type DragTarget =
+  | 'audio'
+  | 'companion'
+  | 'subtitle'
+  | 'document'
+  | null;
 export type UploadAccent = 'emerald' | 'violet' | 'amber';
 export type UploadDocumentType = 'pdf' | 'epub';
 

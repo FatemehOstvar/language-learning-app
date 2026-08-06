@@ -7,6 +7,9 @@ export const AUDIO_ACCEPT =
 export const DOCUMENT_ACCEPT =
   '.pdf,.epub,application/pdf,application/epub+zip';
 
+export const SUBTITLE_ACCEPT =
+  '.srt,.vtt,application/x-subrip,text/vtt';
+
 export const AUDIO_EXTENSIONS = new Set([
   'mp3',
   'm4a',
@@ -18,3 +21,4 @@ export const AUDIO_EXTENSIONS = new Set([
 ]);
 
 export const DOCUMENT_EXTENSIONS = new Set(['pdf', 'epub']);
+export const SUBTITLE_EXTENSIONS = new Set(['srt', 'vtt']);

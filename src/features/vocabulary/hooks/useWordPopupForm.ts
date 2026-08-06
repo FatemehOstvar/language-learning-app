@@ -17,52 +17,99 @@ export function useWordPopupForm({
   onSaved,
   onClose,
 }: UseWordPopupFormOptions) {
-  const [status, setStatusState] = useState<WordStatus>('leitner');
   const [note, setNote] = useState('');
-  const [saving, setSaving] = useState(false);
+  const [savingStatus, setSavingStatus] =
+    useState<WordStatus | null>(null);
+  const [savingNote, setSavingNote] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  const setStatus = useCallback((nextStatus: WordStatus) => {
-    setStatusState(nextStatus);
-    setError(null);
-  }, []);
+  const saveStatus = useCallback(
+    async (nextStatus: WordStatus) => {
+      if (!cleanWord || savingStatus || savingNote) {
+        return;
+      }
 
-  const save = useCallback(async () => {
-    if (!cleanWord || saving) {
+      setSavingStatus(nextStatus);
+      setError(null);
+
+      try {
+        // Status buttons save immediately.
+        // Passing undefined preserves an existing note.
+        await upsertWord(
+          cleanWord,
+          sentence,
+          nextStatus,
+          undefined,
+        );
+
+        onSaved(cleanWord, nextStatus);
+        onClose();
+      } catch (saveError) {
+        setError(
+          saveError instanceof Error
+            ? saveError.message
+            : 'The word could not be saved.',
+        );
+      } finally {
+        setSavingStatus(null);
+      }
+    },
+    [
+      cleanWord,
+      onClose,
+      onSaved,
+      savingNote,
+      savingStatus,
+      sentence,
+    ],
+  );
+
+  const saveNote = useCallback(async () => {
+    if (!cleanWord || savingStatus || savingNote) {
       return;
     }
 
-    setSaving(true);
+    setSavingNote(true);
     setError(null);
 
     try {
-      await upsertWord(
-        cleanWord,
-        sentence,
-        status,
-        status === 'leitner' ? note : undefined,
-      );
+      // Notes belong to Leitner entries and are saved only
+      // through the explicit Save note button.
+      await upsertWord(cleanWord, sentence, 'leitner', note);
 
-      onSaved(cleanWord, status);
+      onSaved(cleanWord, 'leitner');
       onClose();
     } catch (saveError) {
       setError(
         saveError instanceof Error
           ? saveError.message
-          : 'The word could not be saved.',
+          : 'The note could not be saved.',
       );
     } finally {
-      setSaving(false);
+      setSavingNote(false);
     }
-  }, [cleanWord, note, onClose, onSaved, saving, sentence, status]);
+  }, [
+    cleanWord,
+    note,
+    onClose,
+    onSaved,
+    savingNote,
+    savingStatus,
+    sentence,
+  ]);
+
+  const updateNote = useCallback((value: string) => {
+    setNote(value);
+    setError(null);
+  }, []);
 
   return {
-    status,
     note,
-    saving,
+    savingStatus,
+    savingNote,
     error,
-    setStatus,
-    setNote,
-    save,
+    setNote: updateNote,
+    saveStatus,
+    saveNote,
   };
 }

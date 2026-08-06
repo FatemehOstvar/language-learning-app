@@ -1,37 +1,31 @@
+import type { MediaFile } from '@/shared/api/supabase';
 import { DocumentLessonHeader } from '@/features/player/components/DocumentLessonHeader';
-import { DocumentViewer } from '@/features/player/components/DocumentViewer';
-import type { PlayerLessonProps } from '@/features/player/model/types';
+import { DocumentStudyLesson } from '@/features/player/components/DocumentStudyLesson';
 
-export function DocumentLesson({ media, focusMode }: PlayerLessonProps) {
+interface DocumentLessonProps {
+  media: MediaFile;
+  focusMode: boolean;
+}
+
+export function DocumentLesson({
+  media,
+  focusMode,
+}: DocumentLessonProps) {
   return (
-    <div
-      className={
-        focusMode
-          ? 'min-h-screen bg-white'
-          : 'min-h-[calc(100vh-4rem)] bg-slate-50'
-      }
-    >
-      <div
-        className={
-          focusMode ? 'h-screen' : 'mx-auto max-w-7xl px-4 py-6 sm:px-6'
-        }
-      >
-        {!focusMode && (
+    <div className="min-h-[calc(100vh-4rem)] bg-slate-50">
+      {!focusMode && (
+        <div className="mx-auto max-w-3xl px-4 pt-8 sm:px-6">
           <DocumentLessonHeader
             media={media}
-            description="Read the lesson document below."
+            description="Study the document as interactive text."
           />
-        )}
+        </div>
+      )}
 
-        <DocumentViewer
-          media={media}
-          className={
-            focusMode
-              ? 'h-screen min-h-0 rounded-none border-0 shadow-none'
-              : 'h-[calc(100vh-12rem)] min-h-[600px]'
-          }
-        />
-      </div>
+      <DocumentStudyLesson
+        media={media}
+        focusMode
+      />
     </div>
   );
 }
