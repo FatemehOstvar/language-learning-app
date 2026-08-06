@@ -1,12 +1,11 @@
 import AudioDocumentFields from '@/features/upload/components/AudioDocumentFields';
-import DocumentLessonFields from '@/features/player/components/DocumentLessonFields';
 import LessonTitleField from '@/features/upload/components/LessonTitleField';
-import TextLessonFields from '@/features/player/components/TextLessonFields';
 import UploadFormFooter from '@/features/upload/components/UploadFormFooter';
 import UploadProgress from '@/features/upload/components/UploadProgress';
 import UploadSuccessNotice from '@/features/upload/components/UploadSuccessNotice';
 import type { useUploadForm } from '@/features/upload/hooks/useUploadForm';
-
+import DocumentLessonFields from '@/features/upload/components/DocumentLessonFields';
+import TextLessonFields from '@/features/upload/components/TextLessonFields';
 interface UploadLessonFormProps {
   form: ReturnType<typeof useUploadForm>;
   onGoToPlayer: () => void;
