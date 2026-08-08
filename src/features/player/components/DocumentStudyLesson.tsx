@@ -16,6 +16,10 @@ import {
 import type { MediaFile } from '@/shared/api/supabase';
 import { TextLesson } from '@/features/player/components/TextLesson';
 import { extractTextFromFile } from '@/shared/utils/textParser';
+import {
+  parseDocumentSliceFromUrl,
+  stripDocumentSliceFromUrl,
+} from '@/shared/utils/documentSlice';
 
 interface DocumentStudyLessonProps {
   media: MediaFile;
@@ -77,7 +81,9 @@ async function loadDocumentText(
     return cached;
   }
 
-  const response = await fetch(url, { signal });
+  const slice = parseDocumentSliceFromUrl(url);
+  const sourceUrl = stripDocumentSliceFromUrl(url);
+  const response = await fetch(sourceUrl, { signal });
 
   if (!response.ok) {
     throw new Error(
@@ -91,7 +97,7 @@ async function loadDocumentText(
     type: blob.type || getDocumentMimeType(filename),
   });
 
-  const text = (await extractTextFromFile(file))
+  const text = (await extractTextFromFile(file, slice))
     .replace(/\u00a0/g, ' ')
     .replace(/[ \t]+/g, ' ')
     .replace(/\n[ \t]+/g, '\n')

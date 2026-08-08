@@ -5,10 +5,21 @@ import {
   createAudioDocumentLesson,
   createDocumentLesson,
 } from '@/features/upload/services/lessonUploadService';
+import {
+  uploadStorageFile,
+  removeUploadedFiles,
+} from '@/features/upload/services/storageUploadService';
+import {
+  AUDIO_BUCKET,
+  DOCUMENT_BUCKET,
+} from '@/features/upload/config/uploadConfig';
+import { encodeDocumentSliceHash } from '@/shared/utils/documentSlice';
 import type {
   BatchBookDraft,
+  BatchChapterDraft,
   BookUploadType,
   UploadScope,
+  UploadedStorageFile,
 } from '@/features/upload/model/types';
 
 interface CreateBookBatchInput {
@@ -55,6 +66,91 @@ function getMatchedAudio(
   return book.audioFiles[audioIndex];
 }
 
+function isSharedSourceBook(book: BatchBookDraft): boolean {
+  const source = book.sourceDocument;
+  if (!source || book.chapters.length === 0) return false;
+
+  return book.chapters.every(
+    (chapter) => chapter.file === source.file && Boolean(chapter.slice),
+  );
+}
+
+async function insertSharedDocumentChapter({
+  chapter,
+  folderId,
+  sortOrder,
+  document,
+  uploadType,
+  audioFile,
+  onProgress,
+  onMessage,
+  uploadedBatchFiles,
+}: {
+  chapter: BatchChapterDraft;
+  folderId: string;
+  sortOrder: number;
+  document: UploadedStorageFile;
+  uploadType: BookUploadType;
+  audioFile: File | null;
+  onProgress: (progress: number) => void;
+  onMessage: (message: string) => void;
+  uploadedBatchFiles: Array<{ bucket: string; path: string }>;
+}): Promise<MediaFile> {
+  const documentUrl = `${document.publicUrl}${encodeDocumentSliceHash(chapter.slice)}`;
+
+  if (uploadType === 'document') {
+    onMessage('Creating chapter…');
+    const { data, error } = await supabase
+      .from('media_files')
+      .insert({
+        title: chapter.title.trim(),
+        media_type: 'document',
+        content: documentUrl,
+        source_filename: chapter.file.name,
+        folder_id: folderId,
+        sort_order: sortOrder,
+      })
+      .select()
+      .single();
+
+    if (error) throw error;
+    onProgress(100);
+    return data as MediaFile;
+  }
+
+  if (!audioFile) {
+    throw new Error(`Chapter ${sortOrder + 1} has no audio.`);
+  }
+
+  onMessage('Uploading audio…');
+  const uploadedAudio = await uploadStorageFile({
+    bucket: AUDIO_BUCKET,
+    file: audioFile,
+    onProgress: (value) => onProgress(Math.round(value * 0.85)),
+  });
+  uploadedBatchFiles.push({ bucket: AUDIO_BUCKET, path: uploadedAudio.path });
+
+  onMessage('Creating chapter…');
+  const { data, error } = await supabase
+    .from('media_files')
+    .insert({
+      title: chapter.title.trim(),
+      media_type: 'audio_document',
+      audio_url: uploadedAudio.publicUrl,
+      audio_filename: audioFile.name,
+      content: documentUrl,
+      source_filename: chapter.file.name,
+      folder_id: folderId,
+      sort_order: sortOrder,
+    })
+    .select()
+    .single();
+
+  if (error) throw error;
+  onProgress(100);
+  return data as MediaFile;
+}
+
 export async function createBookBatch({
   scope,
   collectionTitle,
@@ -65,6 +161,7 @@ export async function createBookBatch({
 }: CreateBookBatchInput): Promise<MediaFile[]> {
   const createdLessons: MediaFile[] = [];
   const createdFolderIds: string[] = [];
+  const uploadedBatchFiles: Array<{ bucket: string; path: string }> = [];
   const seriesName = scope === 'series' ? collectionTitle.trim() : null;
 
   const totalChapters = books.reduce(
@@ -84,6 +181,28 @@ export async function createBookBatch({
         seriesName,
       );
       createdFolderIds.push(folder.id);
+
+      let sharedDocument: UploadedStorageFile | null = null;
+      if (isSharedSourceBook(book) && book.sourceDocument) {
+        onMessage(`${book.title} · document`);
+        sharedDocument = await uploadStorageFile({
+          bucket: DOCUMENT_BUCKET,
+          file: book.sourceDocument.file,
+          onProgress: (value) => {
+            const beforeBook = totalChapters
+              ? (completedChapters / totalChapters) * 100
+              : 0;
+            const oneChapterShare = totalChapters ? 100 / totalChapters : 100;
+            onProgress(
+              Math.min(99, Math.round(beforeBook + oneChapterShare * 0.35 * (value / 100))),
+            );
+          },
+        });
+        uploadedBatchFiles.push({
+          bucket: DOCUMENT_BUCKET,
+          path: sharedDocument.path,
+        });
+      }
 
       for (
         let chapterIndex = 0;
@@ -109,7 +228,22 @@ export async function createBookBatch({
 
         let lesson: MediaFile;
 
-        if (uploadType === 'audio-document') {
+        if (sharedDocument) {
+          lesson = await insertSharedDocumentChapter({
+            chapter,
+            folderId: folder.id,
+            sortOrder: chapterIndex,
+            document: sharedDocument,
+            uploadType,
+            audioFile:
+              uploadType === 'audio-document'
+                ? getMatchedAudio(book, chapterIndex)
+                : null,
+            onProgress: setChapterProgress,
+            onMessage,
+            uploadedBatchFiles,
+          });
+        } else if (uploadType === 'audio-document') {
           const audioFile = getMatchedAudio(book, chapterIndex);
           if (!audioFile) {
             throw new Error(
@@ -154,6 +288,8 @@ export async function createBookBatch({
     await Promise.allSettled(
       createdLessons.map((lesson) => deleteLesson(lesson)),
     );
+
+    await removeUploadedFiles(uploadedBatchFiles);
 
     await Promise.allSettled(
       createdFolderIds.map((folderId) =>

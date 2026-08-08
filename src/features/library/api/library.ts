@@ -6,6 +6,7 @@ import {
 import type {
   LessonOrderUpdate,
 } from '@/features/library/model/types';
+import { stripDocumentSliceFromUrl } from '@/shared/utils/documentSlice';
 
 function hydrateDocumentFields(lesson: MediaFile): MediaFile {
   const hasDocument =
@@ -178,8 +179,25 @@ function extractStoragePath(
     return null;
   }
 
-  return decodeURIComponent(
-    publicUrl.slice(markerIndex + marker.length),
+  const rawPath = publicUrl.slice(markerIndex + marker.length);
+  return decodeURIComponent(rawPath.split('#')[0].split('?')[0]);
+}
+
+async function documentIsStillReferenced(documentUrl: string): Promise<boolean> {
+  const baseUrl = stripDocumentSliceFromUrl(documentUrl);
+  const { data, error } = await supabase
+    .from('media_files')
+    .select('content')
+    .in('media_type', ['document', 'audio_document']);
+
+  if (error) {
+    // If reference checking fails, keep the shared source rather than risk
+    // breaking another chapter. Orphan cleanup is safer than data loss.
+    return true;
+  }
+
+  return (data ?? []).some((row: { content?: string | null }) =>
+    row.content ? stripDocumentSliceFromUrl(row.content) === baseUrl : false,
   );
 }
 
@@ -208,17 +226,19 @@ async function removeStoredLessonFiles(
       ? lesson.content
       : null);
 
-  const documentPath = extractStoragePath(
-    documentUrl,
-    'documents',
-  );
-
-  if (documentPath) {
-    removals.push(
-      supabase.storage
-        .from('documents')
-        .remove([documentPath]),
+  if (documentUrl && !(await documentIsStillReferenced(documentUrl))) {
+    const documentPath = extractStoragePath(
+      stripDocumentSliceFromUrl(documentUrl),
+      'documents',
     );
+
+    if (documentPath) {
+      removals.push(
+        supabase.storage
+          .from('documents')
+          .remove([documentPath]),
+      );
+    }
   }
 
   await Promise.allSettled(removals);

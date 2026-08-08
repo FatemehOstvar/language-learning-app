@@ -1,19 +1,33 @@
+import type { DocumentSlice } from '@/shared/utils/documentSlice';
+
 /**
  * Extract plain text from uploaded text-based lesson files (PDF, EPUB, TXT)
  * and split it into clean sentences for display.
  */
 
-export async function extractTextFromFile(file: File): Promise<string> {
+export async function extractTextFromFile(
+  file: File,
+  slice?: DocumentSlice,
+): Promise<string> {
   const name = file.name.toLowerCase();
   const isPdf = name.endsWith('.pdf') || file.type === 'application/pdf';
   const isEpub = name.endsWith('.epub') || file.type === 'application/epub+zip';
 
-  if (isPdf) return extractPdfText(file);
-  if (isEpub) return extractEpubText(file);
+  if (isPdf) return extractPdfText(
+    file,
+    slice?.kind === 'pdf-pages' ? slice : undefined,
+  );
+  if (isEpub) return extractEpubText(
+    file,
+    slice?.kind === 'epub-spine' ? slice : undefined,
+  );
   return file.text();
 }
 
-async function extractPdfText(file: File): Promise<string> {
+async function extractPdfText(
+  file: File,
+  slice?: Extract<DocumentSlice, { kind: 'pdf-pages' }>,
+): Promise<string> {
   const pdfjs = await import('pdfjs-dist');
   const arrayBuffer = await file.arrayBuffer();
   // Use the bundled worker via a blob URL so it works in Vite without extra config
@@ -22,7 +36,9 @@ async function extractPdfText(file: File): Promise<string> {
 
   const pdf = await pdfjs.getDocument({ data: arrayBuffer }).promise;
   const pages: string[] = [];
-  for (let i = 1; i <= pdf.numPages; i++) {
+  const startPage = Math.max(1, slice?.startPage ?? 1);
+  const endPage = Math.min(pdf.numPages, slice?.endPage ?? pdf.numPages);
+  for (let i = startPage; i <= endPage; i++) {
     const page = await pdf.getPage(i);
     const content = await page.getTextContent();
     const text = content.items
@@ -71,6 +87,49 @@ function getEpubSectionRoot(
   );
 }
 
+function findEpubFragmentElement(root: Element, fragment: string): Element | null {
+  const doc = root.ownerDocument;
+  const byId = doc?.getElementById(fragment) ?? null;
+  if (byId && root.contains(byId)) return byId;
+
+  return (
+    Array.from(root.querySelectorAll('[name]')).find(
+      (element) => element.getAttribute('name') === fragment,
+    ) ?? null
+  );
+}
+
+function sliceEpubRoot(
+  root: Element,
+  startFragment?: string,
+  endFragment?: string,
+): Element {
+  if (!startFragment && !endFragment) return root;
+
+  const doc = root.ownerDocument;
+  if (!doc) return root;
+
+  const startElement = startFragment
+    ? findEpubFragmentElement(root, startFragment)
+    : null;
+  const endElement = endFragment
+    ? findEpubFragmentElement(root, endFragment)
+    : null;
+
+  try {
+    const range = doc.createRange();
+    range.selectNodeContents(root);
+    if (startElement) range.setStartBefore(startElement);
+    if (endElement) range.setEndBefore(endElement);
+
+    const wrapper = doc.createElement('div');
+    wrapper.append(range.cloneContents());
+    return wrapper;
+  } catch {
+    return root;
+  }
+}
+
 function extractReadableEpubText(root: Element): string {
   const clone = root.cloneNode(true) as Element;
   clone
@@ -95,7 +154,10 @@ function extractReadableEpubText(root: Element): string {
   return normalizeEpubWhitespace(clone.textContent ?? '');
 }
 
-async function extractEpubText(file: File): Promise<string> {
+async function extractEpubText(
+  file: File,
+  slice?: Extract<DocumentSlice, { kind: 'epub-spine' }>,
+): Promise<string> {
   const epubjs = await import('epubjs');
   const book = epubjs.default(await file.arrayBuffer());
   const sections: EpubSectionLike[] = [];
@@ -106,16 +168,20 @@ async function extractEpubText(file: File): Promise<string> {
     // epub.js stores readable chapters in Spine.spineItems. The public each()
     // method iterates those Section objects without relying on missing typings.
     book.spine.each((section: EpubSectionLike) => {
-      sections.push(section);
+      if (section.linear !== false) sections.push(section);
     });
 
     const parts: string[] = [];
 
-    for (const section of sections) {
-      // Skip explicitly non-linear resources such as covers and navigation docs.
-      if (section.linear === false) {
-        continue;
-      }
+    const startIndex = Math.max(0, slice?.startIndex ?? 0);
+    const endIndex = Math.min(
+      sections.length - 1,
+      slice?.endIndex ?? sections.length - 1,
+    );
+
+    for (let index = startIndex; index <= endIndex; index += 1) {
+      const section = sections[index];
+      if (!section) continue;
 
       try {
         // At runtime epub.js Section.load() resolves to the section's root
@@ -127,7 +193,12 @@ async function extractEpubText(file: File): Promise<string> {
           continue;
         }
 
-        const text = extractReadableEpubText(root);
+        const slicedRoot = sliceEpubRoot(
+          root,
+          index === startIndex ? slice?.startFragment : undefined,
+          index === endIndex ? slice?.endFragment : undefined,
+        );
+        const text = extractReadableEpubText(slicedRoot);
         if (text) {
           parts.push(text);
         }

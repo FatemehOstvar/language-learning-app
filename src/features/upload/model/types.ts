@@ -1,4 +1,5 @@
 import type { MediaFile } from '@/shared/api/supabase';
+import type { DocumentSlice } from '@/shared/utils/documentSlice';
 
 export type UploadTab =
   | 'audio-document'
@@ -28,6 +29,14 @@ export interface BatchChapterDraft {
   id: string;
   title: string;
   file: File;
+  slice?: DocumentSlice;
+}
+
+export interface BatchBookSource {
+  file: File;
+  type: UploadDocumentType;
+  unitCount: number;
+  detectedBy: 'pdf-outline' | 'pdf-headings' | 'pdf-manual' | 'epub-toc' | 'epub-spine';
 }
 
 export interface BatchBookDraft {
@@ -37,6 +46,7 @@ export interface BatchBookDraft {
   chapters: BatchChapterDraft[];
   audioFiles: File[];
   audioOffset: number;
+  sourceDocument?: BatchBookSource;
 }
 
 export interface UploadPageProps {

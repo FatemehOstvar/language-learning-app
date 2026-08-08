@@ -19,7 +19,7 @@ const steps = [
     body: (
       <div className="space-y-2 text-sm leading-6 text-slate-600">
         <p>Text → edit draft → Accept.</p>
-        <p>Book = chapter folder. Series = book folders.</p>
+        <p>Book = folder or PDF/EPUB. Series = book folders/files.</p>
         <p>Audio can be reordered or shifted before Create.</p>
       </div>
     ),

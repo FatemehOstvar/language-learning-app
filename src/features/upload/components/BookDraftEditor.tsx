@@ -1,5 +1,7 @@
+import { useEffect, useState } from 'react';
 import { ArrowDown, ArrowUp, ChevronDown, ChevronUp } from 'lucide-react';
 import type { BatchBookDraft } from '@/features/upload/model/types';
+import { formatDocumentSlice } from '@/shared/utils/documentSlice';
 
 interface BookDraftEditorProps {
   book: BatchBookDraft;
@@ -10,6 +12,7 @@ interface BookDraftEditorProps {
   onMoveChapter: (from: number, to: number) => void;
   onMoveAudio: (from: number, to: number) => void;
   onShiftAudio: (delta: number) => void;
+  onSetPdfStarts: (starts: number[]) => void;
 }
 
 function pairedAudioIndex(row: number, offset: number): number {
@@ -25,7 +28,30 @@ export default function BookDraftEditor({
   onMoveChapter,
   onMoveAudio,
   onShiftAudio,
+  onSetPdfStarts,
 }: BookDraftEditorProps) {
+  const pdfSource = book.sourceDocument?.type === 'pdf' ? book.sourceDocument : null;
+  const currentStarts = book.chapters
+    .map((chapter) =>
+      chapter.slice?.kind === 'pdf-pages' ? chapter.slice.startPage : null,
+    )
+    .filter((value): value is number => value !== null)
+    .join(', ');
+  const [pageStarts, setPageStarts] = useState(currentStarts);
+
+  useEffect(() => {
+    setPageStarts(currentStarts);
+  }, [currentStarts]);
+
+  const applyPageStarts = () => {
+    if (!pdfSource) return;
+    const starts = pageStarts
+      .split(/[\s,;]+/)
+      .map((value) => Number.parseInt(value, 10))
+      .filter((value) => Number.isFinite(value));
+    onSetPdfStarts(starts);
+  };
+
   return (
     <section className="rounded-lg border border-slate-200 bg-white p-3">
       <div className="flex items-center gap-2">
@@ -55,6 +81,31 @@ export default function BookDraftEditor({
           </div>
         )}
       </div>
+
+
+
+      {pdfSource && (
+        <div className="mt-2 flex items-center gap-2 rounded-md bg-slate-50 px-2 py-1.5">
+          <span className="shrink-0 text-[11px] text-slate-400">Starts</span>
+          <input
+            aria-label="PDF chapter start pages"
+            value={pageStarts}
+            disabled={disabled}
+            onChange={(event) => setPageStarts(event.target.value)}
+            onBlur={applyPageStarts}
+            onKeyDown={(event) => {
+              if (event.key === 'Enter') {
+                event.preventDefault();
+                applyPageStarts();
+                event.currentTarget.blur();
+              }
+            }}
+            className="h-7 min-w-0 flex-1 rounded border border-slate-200 bg-white px-2 text-[11px] text-slate-700 outline-none focus:border-slate-400 disabled:bg-slate-100"
+            placeholder="1, 12, 35"
+          />
+          <span className="shrink-0 text-[10px] text-slate-400">/{pdfSource.unitCount}</span>
+        </div>
+      )}
 
       <div className="mt-2 overflow-x-auto rounded-md border border-slate-200">
         <table className="w-full min-w-[600px] border-collapse text-left text-xs">
@@ -98,7 +149,9 @@ export default function BookDraftEditor({
                           onChange={(event) => onChapterTitleChange(chapter.id, event.target.value)}
                           className="h-8 w-full rounded-md border border-slate-200 px-2 text-xs text-slate-800 outline-none focus:border-slate-400 disabled:bg-slate-50"
                         />
-                        <p className="mt-0.5 truncate text-[10px] text-slate-400">{chapter.file.name}</p>
+                        <p className="mt-0.5 truncate text-[10px] text-slate-400">
+                          {formatDocumentSlice(chapter.slice) ?? chapter.file.name}
+                        </p>
                       </div>
                     </div>
                   </td>

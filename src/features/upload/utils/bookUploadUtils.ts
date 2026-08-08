@@ -7,6 +7,7 @@ import {
   isAudioFile,
   isDocumentFile,
 } from '@/features/upload/utils/fileUtils';
+import { createSingleDocumentBookDraft } from '@/features/upload/utils/documentChapterDetection';
 
 function makeId(prefix: string): string {
   const suffix =
@@ -132,4 +133,70 @@ export function moveItem<T>(items: T[], from: number, to: number): T[] {
   const [item] = next.splice(from, 1);
   next.splice(to, 0, item);
   return next;
+}
+
+
+export async function createBookDraftFromDocuments(
+  documentFiles: File[],
+  fallbackTitle = 'Book',
+): Promise<BatchBookDraft> {
+  const documents = documentFiles.filter(isDocumentFile).sort(naturalFileSort);
+  if (documents.length === 0) {
+    throw new Error('No PDF or EPUB files were found.');
+  }
+
+  if (documents.length === 1) {
+    const pickedTitle = getPickedRootName(documents) || getFileTitle(documents[0].name) || fallbackTitle;
+    return createSingleDocumentBookDraft(documents[0], pickedTitle);
+  }
+
+  return createSingleBookDraft(documents, [], fallbackTitle);
+}
+
+export async function createSeriesBookDraftsFromDocuments(
+  documentFiles: File[],
+): Promise<BatchBookDraft[]> {
+  const documents = documentFiles.filter(isDocumentFile);
+  const groups = new Map<string, { title: string; files: File[] }>();
+
+  for (const file of documents) {
+    const parts = relativeParts(file);
+    const isRootBookFile = parts.length === 2;
+    const title = isRootBookFile
+      ? getFileTitle(parts[1])
+      : parts.length >= 3
+        ? parts[1]
+        : getFileTitle(file.name);
+    const key = isRootBookFile
+      ? `file:${file.name.toLowerCase()}`
+      : `folder:${title.toLowerCase()}`;
+    const current = groups.get(key);
+    groups.set(key, {
+      title,
+      files: [...(current?.files ?? []), file],
+    });
+  }
+
+  const ordered = Array.from(groups.values()).sort((a, b) =>
+    a.title.localeCompare(b.title, undefined, { numeric: true, sensitivity: 'base' }),
+  );
+
+  const books: BatchBookDraft[] = [];
+  for (const group of ordered) {
+    if (group.files.length === 1) {
+      books.push(await createSingleDocumentBookDraft(group.files[0], group.title));
+      continue;
+    }
+
+    books.push({
+      id: makeId('book'),
+      title: group.title,
+      sourceKey: group.title.toLowerCase(),
+      chapters: createChapterDrafts(group.files),
+      audioFiles: [],
+      audioOffset: 0,
+    });
+  }
+
+  return books;
 }

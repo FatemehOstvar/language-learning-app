@@ -7,11 +7,15 @@ import type {
 } from '@/features/upload/model/types';
 import {
   applySeriesAudioFiles,
-  createSeriesBookDrafts,
-  createSingleBookDraft,
+  createBookDraftFromDocuments,
+  createSeriesBookDraftsFromDocuments,
   getPickedRootName,
   moveItem,
 } from '@/features/upload/utils/bookUploadUtils';
+import {
+  applyPdfChapterStarts,
+  createSingleDocumentBookDraft,
+} from '@/features/upload/utils/documentChapterDetection';
 import { createBookBatch } from '@/features/upload/services/bookUploadService';
 import { isAudioFile, isDocumentFile } from '@/features/upload/utils/fileUtils';
 
@@ -25,6 +29,7 @@ export function useBookUploadForm({ scope, onUploaded }: UseBookUploadFormOption
   const [collectionTitle, setCollectionTitle] = useState('');
   const [books, setBooks] = useState<BatchBookDraft[]>([]);
   const [uploading, setUploading] = useState(false);
+  const [parsing, setParsing] = useState(false);
   const [progress, setProgress] = useState(0);
   const [progressMessage, setProgressMessage] = useState('');
   const [error, setError] = useState<string | null>(null);
@@ -35,25 +40,59 @@ export function useBookUploadForm({ scope, onUploaded }: UseBookUploadFormOption
     setSuccess(false);
   }, []);
 
-  const handleDocumentFolder = useCallback((files: File[]) => {
+  const handleDocumentFolder = useCallback(async (files: File[]) => {
     resetMessages();
     const documents = files.filter(isDocumentFile);
     if (documents.length === 0) {
-      setError('No PDF or EPUB chapter files were found in that folder.');
+      setError('No PDF or EPUB files were found.');
       return;
     }
 
-    if (scope === 'series') {
-      const nextBooks = createSeriesBookDrafts(documents);
-      setBooks(nextBooks);
-      setCollectionTitle((current) => current.trim() || getPickedRootName(files));
-      return;
-    }
+    setParsing(true);
+    try {
+      if (scope === 'series') {
+        const nextBooks = await createSeriesBookDraftsFromDocuments(documents);
+        setBooks(nextBooks);
+        setCollectionTitle((current) => current.trim() || getPickedRootName(files));
+        return;
+      }
 
-    const book = createSingleBookDraft(documents);
-    setBooks([book]);
-    setCollectionTitle(book.title);
+      const book = await createBookDraftFromDocuments(documents);
+      setBooks([book]);
+      setCollectionTitle(book.title);
+    } catch (parseError) {
+      setError(
+        parseError instanceof Error
+          ? parseError.message
+          : 'The book could not be read.',
+      );
+    } finally {
+      setParsing(false);
+    }
   }, [resetMessages, scope]);
+
+  const handleDocumentFile = useCallback(async (file: File) => {
+    resetMessages();
+    if (!isDocumentFile(file)) {
+      setError('Choose a PDF or EPUB file.');
+      return;
+    }
+
+    setParsing(true);
+    try {
+      const book = await createSingleDocumentBookDraft(file);
+      setBooks([book]);
+      setCollectionTitle(book.title);
+    } catch (parseError) {
+      setError(
+        parseError instanceof Error
+          ? parseError.message
+          : 'The book could not be read.',
+      );
+    } finally {
+      setParsing(false);
+    }
+  }, [resetMessages]);
 
   const handleAudioFolder = useCallback((files: File[]) => {
     resetMessages();
@@ -109,7 +148,7 @@ export function useBookUploadForm({ scope, onUploaded }: UseBookUploadFormOption
   );
 
   const canSubmit = useMemo(() => {
-    if (uploading || books.length === 0) return false;
+    if (uploading || parsing || books.length === 0) return false;
     if (scope === 'series' && !collectionTitle.trim()) return false;
 
     for (const book of books) {
@@ -126,7 +165,7 @@ export function useBookUploadForm({ scope, onUploaded }: UseBookUploadFormOption
     }
 
     return true;
-  }, [books, collectionTitle, scope, uploadType, uploading]);
+  }, [books, collectionTitle, parsing, scope, uploadType, uploading]);
 
   const handleSubmit = useCallback(async () => {
     if (!canSubmit) {
@@ -176,6 +215,7 @@ export function useBookUploadForm({ scope, onUploaded }: UseBookUploadFormOption
     collectionTitle,
     books,
     uploading,
+    parsing,
     progress,
     progressMessage,
     error,
@@ -190,6 +230,7 @@ export function useBookUploadForm({ scope, onUploaded }: UseBookUploadFormOption
       resetMessages();
     },
     handleDocumentFolder,
+    handleDocumentFile,
     handleAudioFolder,
     clearDocuments,
     clearAudio,
@@ -212,6 +253,8 @@ export function useBookUploadForm({ scope, onUploaded }: UseBookUploadFormOption
           Math.min(book.chapters.length, book.audioOffset + delta),
         ),
       })),
+    setPdfChapterStarts: (bookId: string, starts: number[]) =>
+      updateBook(bookId, (book) => applyPdfChapterStarts(book, starts)),
     handleSubmit,
   };
 }

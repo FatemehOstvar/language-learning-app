@@ -24,7 +24,7 @@ const ACCENT_STYLES = {
   amber: 'text-amber-600',
 } as const;
 
-export default function FileDropzone({
+function FileDropzone({
   label,
   description,
   icon: Icon,
@@ -99,3 +99,6 @@ export default function FileDropzone({
     </div>
   );
 }
+
+export { FileDropzone };
+export default FileDropzone;

@@ -1,6 +1,7 @@
 import { FileText, Headphones, Loader2 } from 'lucide-react';
 import DirectoryPicker from '@/features/upload/components/DirectoryPicker';
 import BookDraftEditor from '@/features/upload/components/BookDraftEditor';
+import DocumentFilePicker from '@/features/upload/components/DocumentFilePicker';
 import UploadSuccessNotice from '@/features/upload/components/UploadSuccessNotice';
 import { useBookUploadForm } from '@/features/upload/hooks/useBookUploadForm';
 import type { MediaFile } from '@/shared/api/supabase';
@@ -20,6 +21,10 @@ export default function BookUploadForm({
   const form = useBookUploadForm({ scope, onUploaded });
   const chapterCount = form.books.reduce((sum, book) => sum + book.chapters.length, 0);
   const audioCount = form.books.reduce((sum, book) => sum + book.audioFiles.length, 0);
+  const singleSourceFile =
+    scope === 'book' && form.books.length === 1
+      ? form.books[0].sourceDocument?.file ?? null
+      : null;
 
   return (
     <main className="overflow-hidden rounded-xl border border-slate-200 bg-white">
@@ -30,14 +35,14 @@ export default function BookUploadForm({
             onClick={() => form.setUploadType('audio-document')}
             icon={Headphones}
             label="Audio + doc"
-            disabled={form.uploading}
+            disabled={form.uploading || form.parsing}
           />
           <TypeButton
             active={form.uploadType === 'document'}
             onClick={() => form.setUploadType('document')}
             icon={FileText}
             label="Document"
-            disabled={form.uploading}
+            disabled={form.uploading || form.parsing}
           />
         </div>
 
@@ -45,29 +50,49 @@ export default function BookUploadForm({
           <input
             aria-label="Series title"
             value={form.collectionTitle}
-            disabled={form.uploading}
+            disabled={form.uploading || form.parsing}
             onChange={(event) => form.setCollectionTitle(event.target.value)}
             placeholder="Series title"
             className="h-10 w-full rounded-lg border border-slate-200 px-3 text-sm outline-none focus:border-slate-400 disabled:bg-slate-50"
           />
         )}
 
-        <div className="grid gap-2 sm:grid-cols-2">
-          <DirectoryPicker
-            label={scope === 'series' ? 'Books' : 'Chapters'}
-            description={scope === 'series' ? 'Series folder with book subfolders' : 'Book folder with PDF/EPUB chapters'}
-            summary={chapterCount ? `${form.books.length} book${form.books.length === 1 ? '' : 's'} · ${chapterCount} chapter${chapterCount === 1 ? '' : 's'}` : null}
-            disabled={form.uploading}
-            onFiles={form.handleDocumentFolder}
-            onClear={form.clearDocuments}
-          />
+        <div className={`grid gap-2 ${scope === 'book' && form.uploadType === 'audio-document' ? 'sm:grid-cols-3' : 'sm:grid-cols-2'}`}>
+          {scope === 'book' ? (
+            <>
+              <DocumentFilePicker
+                file={singleSourceFile}
+                disabled={form.uploading || form.parsing}
+                parsing={form.parsing}
+                onFile={(file) => void form.handleDocumentFile(file)}
+                onClear={form.clearDocuments}
+              />
+              <DirectoryPicker
+                label="Folder"
+                description="One file per chapter, or one PDF/EPUB to split"
+                summary={!singleSourceFile && chapterCount ? `${chapterCount} chapters` : null}
+                disabled={form.uploading || form.parsing}
+                onFiles={(files) => void form.handleDocumentFolder(files)}
+                onClear={form.clearDocuments}
+              />
+            </>
+          ) : (
+            <DirectoryPicker
+              label="Books"
+              description="Book folders, or one PDF/EPUB file per book"
+              summary={chapterCount ? `${form.books.length} books · ${chapterCount} chapters` : null}
+              disabled={form.uploading || form.parsing}
+              onFiles={(files) => void form.handleDocumentFolder(files)}
+              onClear={form.clearDocuments}
+            />
+          )}
 
           {form.uploadType === 'audio-document' && (
             <DirectoryPicker
               label="Audio"
               description={scope === 'series' ? 'Matching book subfolders' : 'Audio files in chapter order'}
               summary={audioCount ? `${audioCount} files` : null}
-              disabled={form.uploading || form.books.length === 0}
+              disabled={form.uploading || form.parsing || form.books.length === 0}
               onFiles={form.handleAudioFolder}
               onClear={form.clearAudio}
             />
@@ -96,6 +121,7 @@ export default function BookUploadForm({
                 onMoveChapter={(from, to) => form.moveChapter(book.id, from, to)}
                 onMoveAudio={(from, to) => form.moveAudio(book.id, from, to)}
                 onShiftAudio={(delta) => form.shiftAudio(book.id, delta)}
+                onSetPdfStarts={(starts) => form.setPdfChapterStarts(book.id, starts)}
               />
             ))}
           </div>
@@ -107,14 +133,14 @@ export default function BookUploadForm({
           </div>
         )}
 
-        {form.uploading && (
+        {(form.uploading || form.parsing) && (
           <div className="rounded-lg border border-slate-200 bg-slate-50 px-3 py-2">
             <div className="flex items-center justify-between gap-3 text-xs text-slate-500">
               <span className="flex min-w-0 items-center gap-2 truncate">
                 <Loader2 className="h-3.5 w-3.5 shrink-0 animate-spin" />
-                {form.progressMessage || 'Saving…'}
+                {form.parsing ? 'Reading chapters…' : form.progressMessage || 'Saving…'}
               </span>
-              <span className="tabular-nums">{form.progress}%</span>
+              {!form.parsing && <span className="tabular-nums">{form.progress}%</span>}
             </div>
           </div>
         )}
