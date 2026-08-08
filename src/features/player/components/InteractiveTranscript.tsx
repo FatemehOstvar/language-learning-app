@@ -1,4 +1,4 @@
-import type { MouseEvent, RefObject } from 'react';
+import type { PointerEvent, RefObject } from 'react';
 import type { LeitnerWord } from '@/features/vocabulary/api/leitner';
 import { getWordClass } from '@/features/player/utils/wordTrackingUtils';
 import type { Sentence } from '@/features/player/model/types';
@@ -11,7 +11,7 @@ interface SentenceTextProps {
   activeRef?: RefObject<HTMLSpanElement>;
   onSentenceClick: (sentence: Sentence) => void;
   onWordClick: (
-    event: MouseEvent<HTMLElement>,
+    event: PointerEvent<HTMLElement>,
     word: string,
     sentence: string,
   ) => void;
@@ -53,9 +53,10 @@ export function InteractiveTranscript({
             {sentence.text.split(/\s+/).map((word, wordIndex) => (
               <span
                 key={`${sentence.index}-${wordIndex}`}
-                onClick={(event) =>
+                onPointerDown={(event) =>
                   onWordClick(event, word, sentence.text)
                 }
+                onClick={(event) => event.stopPropagation()}
                 className={`cursor-pointer rounded px-0.5 transition-colors hover:underline ${getWordClass(
                   word,
                   trackedWords,

@@ -2,6 +2,7 @@ import { AudioTransportControls } from '@/features/player/components/AudioTransp
 import { DocumentLessonHeader } from '@/features/player/components/DocumentLessonHeader';
 import { DocumentStudyLesson } from '@/features/player/components/DocumentStudyLesson';
 import { useAudioPlayback } from '@/features/player/hooks/useAudioPlayback';
+import { usePlaybackShortcuts } from '@/features/player/hooks/usePlaybackShortcuts';
 import type { PlayerLessonProps } from '@/features/player/model/types';
 
 export function AudioDocumentLesson({
@@ -9,6 +10,11 @@ export function AudioDocumentLesson({
   focusMode,
 }: PlayerLessonProps) {
   const playback = useAudioPlayback(media.id);
+  const minuteBuffer = usePlaybackShortcuts({
+    onTogglePlay: playback.togglePlay,
+    onSeek: playback.seek,
+    onSkip: playback.skip,
+  });
 
   return (
     <div
@@ -43,6 +49,12 @@ export function AudioDocumentLesson({
         focusMode
         controlsBottomClassName="bottom-14"
       />
+
+      {minuteBuffer && (
+        <div className="fixed left-1/2 top-20 z-[60] -translate-x-1/2 rounded-xl bg-slate-900 px-4 py-2 font-mono text-sm text-white shadow-lg">
+          Jumping to {minuteBuffer} min...
+        </div>
+      )}
 
       <div className="fixed inset-x-0 bottom-0 z-50 border-t border-slate-200 bg-white/90 backdrop-blur-xl">
         <div className="mx-auto max-w-5xl px-1 py-[3px]">

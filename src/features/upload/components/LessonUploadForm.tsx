@@ -18,15 +18,13 @@ export default function LessonUploadForm({
   onGoToPlayer,
 }: LessonUploadFormProps) {
   return (
-    <main className="overflow-hidden rounded-2xl border border-slate-200 bg-white">
-      <div className="space-y-6 p-5 sm:p-6">
+    <main className="overflow-hidden rounded-xl border border-slate-200 bg-white">
+      <div className="space-y-3 p-4 sm:p-5">
         <LessonTitleField
           value={form.lessonTitle}
           disabled={form.uploading}
           onChange={form.handleTitleChange}
         />
-
-        <div className="h-px bg-slate-100" />
 
         {form.tab === 'audio-document' && (
           <AudioDocumentFields
@@ -77,7 +75,9 @@ export default function LessonUploadForm({
             value={form.textBoxContent}
             wordCount={form.wordCount}
             disabled={form.uploading}
+            sourceFileName={form.textSourceFileName}
             onChange={form.handleTextChange}
+            onTextFile={form.handleTextFile}
           />
         )}
 
@@ -88,16 +88,13 @@ export default function LessonUploadForm({
           message={form.progressMessage}
           error={form.error}
         />
-
-        <UploadSuccessNotice
-          visible={form.success}
-          onOpenLesson={onGoToPlayer}
-        />
+        <UploadSuccessNotice visible={form.success} onOpenLesson={onGoToPlayer} />
       </div>
 
       <UploadFormFooter
         uploading={form.uploading}
         canSubmit={form.canSubmit}
+        label={form.tab === 'textbox' ? 'Accept' : 'Create'}
         onSubmit={() => void form.handleSubmit()}
       />
     </main>

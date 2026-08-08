@@ -42,6 +42,7 @@ function throwIfError(
   }
 }
 
+
 export async function fetchLibraryFolders(): Promise<LibraryFolder[]> {
   const { data, error } = await supabase
     .from('library_folders')

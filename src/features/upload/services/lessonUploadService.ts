@@ -21,6 +21,8 @@ interface AudioDocumentLessonInput extends UploadProgressCallbacks {
   title: string;
   audioFile: File;
   companionFile: File;
+  folderId?: string | null;
+  sortOrder?: number;
 }
 
 interface AudioSubtitleLessonInput extends UploadProgressCallbacks {
@@ -32,11 +34,14 @@ interface AudioSubtitleLessonInput extends UploadProgressCallbacks {
 interface DocumentLessonInput extends UploadProgressCallbacks {
   title: string;
   documentFile: File;
+  folderId?: string | null;
+  sortOrder?: number;
 }
 
 interface TextLessonInput {
   title: string;
   text: string;
+  sourceFilename?: string | null;
   onMessage: (message: string) => void;
 }
 
@@ -121,6 +126,8 @@ export async function createAudioDocumentLesson({
   title,
   audioFile,
   companionFile,
+  folderId = null,
+  sortOrder = 0,
   onProgress,
   onMessage,
 }: AudioDocumentLessonInput): Promise<MediaFile> {
@@ -153,6 +160,8 @@ export async function createAudioDocumentLesson({
         audio_filename: audioFile.name,
         content: uploadedDocument.publicUrl,
         source_filename: companionFile.name,
+        folder_id: folderId,
+        sort_order: sortOrder,
       })
       .select()
       .single();
@@ -204,6 +213,8 @@ export async function createAudioSubtitleLesson({
         audio_filename: audioFile.name,
         srt_content: srtContent,
         srt_filename: subtitleFile.name,
+        folder_id: null,
+        sort_order: 0,
       })
       .select()
       .single();
@@ -222,6 +233,8 @@ export async function createAudioSubtitleLesson({
 export async function createDocumentLesson({
   title,
   documentFile,
+  folderId = null,
+  sortOrder = 0,
   onProgress,
   onMessage,
 }: DocumentLessonInput): Promise<MediaFile> {
@@ -243,6 +256,8 @@ export async function createDocumentLesson({
         media_type: 'document',
         content: uploadedDocument.publicUrl,
         source_filename: documentFile.name,
+        folder_id: folderId,
+        sort_order: sortOrder,
       })
       .select()
       .single();
@@ -264,6 +279,7 @@ export async function createDocumentLesson({
 export async function createTextLesson({
   title,
   text,
+  sourceFilename = null,
   onMessage,
 }: TextLessonInput): Promise<MediaFile> {
   onMessage('Creating lesson…');
@@ -275,6 +291,9 @@ export async function createTextLesson({
       title: title.trim(),
       media_type: 'text',
       content,
+      source_filename: sourceFilename?.trim() || null,
+      folder_id: null,
+      sort_order: 0,
     })
     .select()
     .single();

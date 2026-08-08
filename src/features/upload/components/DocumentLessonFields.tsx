@@ -14,40 +14,21 @@ interface DocumentLessonFieldsProps {
   onDraggingChange: (target: DragTarget) => void;
 }
 
-export default function DocumentLessonFields({
-  file,
-  dragging,
-  disabled,
-  inputRef,
-  onFile,
-  onRemove,
-  onDraggingChange,
-}: DocumentLessonFieldsProps) {
+export default function DocumentLessonFields(props: DocumentLessonFieldsProps) {
   return (
-    <section>
-      <div className="mb-3">
-        <h2 className="text-sm font-medium text-slate-800">Document</h2>
-        <p className="mt-1 text-xs leading-5 text-slate-500">
-          Upload the PDF or EPUB you want to study.
-        </p>
-      </div>
-
-      <FileDropzone
-        label="PDF or EPUB"
-        description="The original file is preserved"
-        icon={BookOpen}
-        accent="amber"
-        file={file}
-        dragging={dragging === 'document'}
-        disabled={disabled}
-        inputRef={inputRef}
-        accept={DOCUMENT_ACCEPT}
-        onFile={onFile}
-        onRemove={onRemove}
-        onDraggingChange={(active) =>
-          onDraggingChange(active ? 'document' : null)
-        }
-      />
-    </section>
+    <FileDropzone
+      label="PDF or EPUB"
+      description="PDF or EPUB"
+      icon={BookOpen}
+      accent="amber"
+      file={props.file}
+      dragging={props.dragging === 'document'}
+      disabled={props.disabled}
+      inputRef={props.inputRef}
+      accept={DOCUMENT_ACCEPT}
+      onFile={props.onFile}
+      onRemove={props.onRemove}
+      onDraggingChange={(active) => props.onDraggingChange(active ? 'document' : null)}
+    />
   );
 }

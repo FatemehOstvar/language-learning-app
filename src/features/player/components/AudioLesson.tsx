@@ -29,6 +29,7 @@ export function AudioLesson({ media, focusMode }: PlayerLessonProps) {
   const minuteBuffer = usePlaybackShortcuts({
     onTogglePlay: playback.togglePlay,
     onSeek: playback.seek,
+    onSkip: playback.skip,
   });
 
   useEffect(() => {
@@ -116,6 +117,7 @@ export function AudioLesson({ media, focusMode }: PlayerLessonProps) {
 
       {vocabulary.popup && (
         <WordPopup
+          key={`${vocabulary.popup.word}-${vocabulary.popup.x}-${vocabulary.popup.y}`}
           {...vocabulary.popup}
           onClose={vocabulary.closePopup}
           onSaved={vocabulary.handlePopupSaved}

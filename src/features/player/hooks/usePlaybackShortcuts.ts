@@ -3,11 +3,13 @@ import { useEffect, useRef, useState } from 'react';
 interface PlaybackShortcutOptions {
   onTogglePlay: () => void;
   onSeek: (seconds: number) => void;
+  onSkip: (seconds: number) => void;
 }
 
 export function usePlaybackShortcuts({
   onTogglePlay,
   onSeek,
+  onSkip,
 }: PlaybackShortcutOptions) {
   const timeoutRef = useRef<number | undefined>(undefined);
   const [minuteBuffer, setMinuteBuffer] = useState('');
@@ -18,13 +20,34 @@ export function usePlaybackShortcuts({
       const isTyping =
         target.tagName === 'INPUT' ||
         target.tagName === 'TEXTAREA' ||
+        target.tagName === 'SELECT' ||
         target.isContentEditable;
 
-      if (isTyping) return;
+      if (
+        isTyping ||
+        event.repeat ||
+        event.altKey ||
+        event.ctrlKey ||
+        event.metaKey
+      ) {
+        return;
+      }
 
       if (event.code === 'Space') {
         event.preventDefault();
         onTogglePlay();
+        return;
+      }
+
+      if (event.key === 'ArrowLeft') {
+        event.preventDefault();
+        onSkip(-3);
+        return;
+      }
+
+      if (event.key === 'ArrowRight') {
+        event.preventDefault();
+        onSkip(3);
         return;
       }
 
@@ -50,7 +73,7 @@ export function usePlaybackShortcuts({
       window.removeEventListener('keydown', handleKeyDown);
       window.clearTimeout(timeoutRef.current);
     };
-  }, [onSeek, onTogglePlay]);
+  }, [onSeek, onSkip, onTogglePlay]);
 
   return minuteBuffer;
 }

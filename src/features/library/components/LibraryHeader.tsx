@@ -1,4 +1,4 @@
-import { FolderPlus } from 'lucide-react';
+import { Plus } from 'lucide-react';
 
 interface LibraryHeaderProps {
   lessonCount: number;
@@ -10,31 +10,20 @@ export default function LibraryHeader({
   onCreateFolder,
 }: LibraryHeaderProps) {
   return (
-    <header className="flex items-start justify-between gap-4">
-      <div>
-        <p className="text-xs font-semibold uppercase tracking-[0.16em] text-emerald-700">
-          Library
-        </p>
-
-        <h1 className="mt-2 text-2xl font-semibold tracking-tight text-slate-950 sm:text-3xl">
-          Your lessons
-        </h1>
-
-        <p className="mt-1 text-sm text-slate-500">
-          {lessonCount}{' '}
-          {lessonCount === 1 ? 'lesson' : 'lessons'}
-        </p>
+    <header className="flex items-center justify-between gap-4">
+      <div className="flex items-baseline gap-2">
+        <h1 className="text-2xl font-semibold tracking-tight text-slate-950">Library</h1>
+        <span className="text-xs tabular-nums text-slate-400">{lessonCount}</span>
       </div>
 
       <button
         type="button"
         onClick={onCreateFolder}
-        className="inline-flex h-10 items-center gap-2 rounded-xl border border-slate-200 bg-white px-3.5 text-sm font-medium text-slate-700 transition hover:border-slate-300 hover:bg-slate-50"
+        aria-label="New folder"
+        title="New folder"
+        className="inline-flex h-9 w-9 items-center justify-center rounded-lg border border-slate-200 bg-white text-slate-600 hover:bg-slate-50"
       >
-        <FolderPlus className="h-4 w-4" />
-        <span className="hidden sm:inline">
-          New folder
-        </span>
+        <Plus className="h-4 w-4" />
       </button>
     </header>
   );

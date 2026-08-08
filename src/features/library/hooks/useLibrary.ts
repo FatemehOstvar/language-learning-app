@@ -15,6 +15,7 @@ import {
   renameLibraryFolder,
   saveLessonOrder,
 } from '@/features/library/api/library';
+import { getFolderDisplayName } from '@/features/library/utils/folderNaming';
 import type {
   LessonTypeFilter,
   LibraryCounts,
@@ -25,91 +26,53 @@ import type {
   MediaFile,
 } from '@/shared/api/supabase';
 
-function getErrorMessage(
-  error: unknown,
-  fallback: string,
-): string {
-  return error instanceof Error
-    ? error.message
-    : fallback;
+function getErrorMessage(error: unknown, fallback: string): string {
+  return error instanceof Error ? error.message : fallback;
 }
 
-function lessonMatchesView(
-  lesson: MediaFile,
-  view: LibraryView,
-): boolean {
-  if (view.kind === 'all') {
-    return true;
-  }
-
-  if (view.kind === 'unfiled') {
-    return lesson.folder_id === null;
-  }
-
+function lessonMatchesView(lesson: MediaFile, view: LibraryView): boolean {
+  if (view.kind === 'all') return true;
+  if (view.kind === 'unfiled') return lesson.folder_id === null;
   return lesson.folder_id === view.folderId;
 }
 
-function sortLessons(
-  lessons: MediaFile[],
-  view: LibraryView,
-): MediaFile[] {
+function sortLessons(lessons: MediaFile[], view: LibraryView): MediaFile[] {
   return [...lessons].sort((a, b) => {
     if (view.kind === 'all') {
-      return (
-        new Date(b.created_at).getTime() -
-        new Date(a.created_at).getTime()
-      );
+      return new Date(b.created_at).getTime() - new Date(a.created_at).getTime();
     }
 
     if (a.sort_order !== b.sort_order) {
       return a.sort_order - b.sort_order;
     }
 
-    return (
-      new Date(a.created_at).getTime() -
-      new Date(b.created_at).getTime()
-    );
+    return new Date(a.created_at).getTime() - new Date(b.created_at).getTime();
   });
 }
 
 export function useLibrary() {
-  const [folders, setFolders] =
-    useState<LibraryFolder[]>([]);
-
-  const [lessons, setLessons] =
-    useState<MediaFile[]>([]);
-
-  const [activeView, setActiveView] =
-    useState<LibraryView>({ kind: 'all' });
-
+  const [folders, setFolders] = useState<LibraryFolder[]>([]);
+  const [lessons, setLessons] = useState<MediaFile[]>([]);
+  const [activeView, setActiveView] = useState<LibraryView>({ kind: 'all' });
   const [search, setSearch] = useState('');
-  const [typeFilter, setTypeFilter] =
-    useState<LessonTypeFilter>('all');
-
+  const [typeFilter, setTypeFilter] = useState<LessonTypeFilter>('all');
   const [loading, setLoading] = useState(true);
-  const [error, setError] =
-    useState<string | null>(null);
+  const [error, setError] = useState<string | null>(null);
 
   const load = useCallback(async () => {
     setLoading(true);
     setError(null);
 
     try {
-      const [nextFolders, nextLessons] =
-        await Promise.all([
-          fetchLibraryFolders(),
-          fetchLibraryLessons(),
-        ]);
+      const [nextFolders, nextLessons] = await Promise.all([
+        fetchLibraryFolders(),
+        fetchLibraryLessons(),
+      ]);
 
       setFolders(nextFolders);
       setLessons(nextLessons);
     } catch (loadError) {
-      setError(
-        getErrorMessage(
-          loadError,
-          'The library could not be loaded.',
-        ),
-      );
+      setError(getErrorMessage(loadError, 'Could not load library.'));
     } finally {
       setLoading(false);
     }
@@ -135,62 +98,32 @@ export function useLibrary() {
       );
     }
 
-    return {
-      all: lessons.length,
-      unfiled,
-      byFolder,
-    };
+    return { all: lessons.length, unfiled, byFolder };
   }, [lessons]);
 
   const visibleLessons = useMemo(() => {
     const query = search.trim().toLowerCase();
 
-    const filtered = lessons.filter((lesson) => {
-      if (!lessonMatchesView(lesson, activeView)) {
-        return false;
-      }
-
-      if (
-        typeFilter !== 'all' &&
-        lesson.media_type !== typeFilter
-      ) {
-        return false;
-      }
-
-      return (
-        !query ||
-        lesson.title.toLowerCase().includes(query)
-      );
-    });
-
-    return sortLessons(filtered, activeView);
-  }, [
-    activeView,
-    lessons,
-    search,
-    typeFilter,
-  ]);
+    return sortLessons(
+      lessons.filter((lesson) => {
+        if (!lessonMatchesView(lesson, activeView)) return false;
+        if (typeFilter !== 'all' && lesson.media_type !== typeFilter) return false;
+        return !query || lesson.title.toLowerCase().includes(query);
+      }),
+      activeView,
+    );
+  }, [activeView, lessons, search, typeFilter]);
 
   const activeViewName = useMemo(() => {
-    if (activeView.kind === 'all') {
-      return 'All lessons';
-    }
+    if (activeView.kind === 'all') return 'All';
+    if (activeView.kind === 'unfiled') return 'Unfiled';
 
-    if (activeView.kind === 'unfiled') {
-      return 'Unfiled';
-    }
-
-    return (
-      folders.find(
-        (folder) => folder.id === activeView.folderId,
-      )?.name ?? 'Folder'
-    );
+    const folder = folders.find((item) => item.id === activeView.folderId);
+    return folder ? getFolderDisplayName(folder.name) : 'Folder';
   }, [activeView, folders]);
 
   const canReorder =
-    activeView.kind !== 'all' &&
-    search.trim() === '' &&
-    typeFilter === 'all';
+    activeView.kind !== 'all' && search.trim() === '' && typeFilter === 'all';
 
   const nextSortOrder = useCallback(
     (folderId: string | null) => {
@@ -198,14 +131,7 @@ export function useLibrary() {
         (lesson) => lesson.folder_id === folderId,
       );
 
-      return (
-        Math.max(
-          -1,
-          ...folderLessons.map(
-            (lesson) => lesson.sort_order,
-          ),
-        ) + 1
-      );
+      return Math.max(-1, ...folderLessons.map((lesson) => lesson.sort_order)) + 1;
     },
     [lessons],
   );
@@ -213,202 +139,96 @@ export function useLibrary() {
   const createFolder = useCallback(
     async (name: string) => {
       const cleanName = name.trim();
-
-      if (!cleanName) {
-        return null;
-      }
+      if (!cleanName) return null;
 
       setError(null);
-
       try {
-        const folder = await createLibraryFolder(
-          cleanName,
-          folders.length,
-        );
-
-        setFolders((current) => [
-          ...current,
-          folder,
-        ]);
-
-        setActiveView({
-          kind: 'folder',
-          folderId: folder.id,
-        });
-
+        const folder = await createLibraryFolder(cleanName, folders.length);
+        setFolders((current) => [...current, folder]);
+        setActiveView({ kind: 'folder', folderId: folder.id });
         return folder;
       } catch (createError) {
-        setError(
-          getErrorMessage(
-            createError,
-            'The folder could not be created.',
-          ),
-        );
+        setError(getErrorMessage(createError, 'Could not create folder.'));
         return null;
       }
     },
     [folders.length],
   );
 
-  const renameFolder = useCallback(
-    async (id: string, name: string) => {
-      const cleanName = name.trim();
+  const renameFolder = useCallback(async (id: string, name: string) => {
+    const cleanName = name.trim();
+    if (!cleanName) return false;
 
-      if (!cleanName) {
-        return false;
-      }
+    setError(null);
+    try {
+      const updated = await renameLibraryFolder(id, cleanName);
+      setFolders((current) =>
+        current.map((folder) => (folder.id === id ? updated : folder)),
+      );
+      return true;
+    } catch (renameError) {
+      setError(getErrorMessage(renameError, 'Could not rename folder.'));
+      return false;
+    }
+  }, []);
 
-      setError(null);
+  const removeFolder = useCallback(async (id: string) => {
+    setError(null);
+    try {
+      await deleteLibraryFolder(id);
+      setFolders((current) => current.filter((folder) => folder.id !== id));
+      setLessons((current) =>
+        current.map((lesson) =>
+          lesson.folder_id === id ? { ...lesson, folder_id: null } : lesson,
+        ),
+      );
+      setActiveView((current) =>
+        current.kind === 'folder' && current.folderId === id
+          ? { kind: 'unfiled' }
+          : current,
+      );
+      return true;
+    } catch (deleteError) {
+      setError(getErrorMessage(deleteError, 'Could not delete folder.'));
+      return false;
+    }
+  }, []);
 
-      try {
-        const updated = await renameLibraryFolder(
-          id,
-          cleanName,
-        );
+  const renameLesson = useCallback(async (id: string, title: string) => {
+    const cleanTitle = title.trim();
+    if (!cleanTitle) return false;
 
-        setFolders((current) =>
-          current.map((folder) =>
-            folder.id === id ? updated : folder,
-          ),
-        );
-
-        return true;
-      } catch (renameError) {
-        setError(
-          getErrorMessage(
-            renameError,
-            'The folder could not be renamed.',
-          ),
-        );
-        return false;
-      }
-    },
-    [],
-  );
-
-  const removeFolder = useCallback(
-    async (id: string) => {
-      setError(null);
-
-      try {
-        await deleteLibraryFolder(id);
-
-        setFolders((current) =>
-          current.filter(
-            (folder) => folder.id !== id,
-          ),
-        );
-
-        setLessons((current) =>
-          current.map((lesson) =>
-            lesson.folder_id === id
-              ? {
-                  ...lesson,
-                  folder_id: null,
-                }
-              : lesson,
-          ),
-        );
-
-        setActiveView((current) =>
-          current.kind === 'folder' &&
-          current.folderId === id
-            ? { kind: 'unfiled' }
-            : current,
-        );
-
-        return true;
-      } catch (deleteError) {
-        setError(
-          getErrorMessage(
-            deleteError,
-            'The folder could not be deleted.',
-          ),
-        );
-        return false;
-      }
-    },
-    [],
-  );
-
-  const renameLesson = useCallback(
-    async (id: string, title: string) => {
-      const cleanTitle = title.trim();
-
-      if (!cleanTitle) {
-        return false;
-      }
-
-      setError(null);
-
-      try {
-        const updated = await renameLessonRecord(
-          id,
-          cleanTitle,
-        );
-
-        setLessons((current) =>
-          current.map((lesson) =>
-            lesson.id === id ? updated : lesson,
-          ),
-        );
-
-        return true;
-      } catch (renameError) {
-        setError(
-          getErrorMessage(
-            renameError,
-            'The lesson could not be renamed.',
-          ),
-        );
-        return false;
-      }
-    },
-    [],
-  );
+    setError(null);
+    try {
+      const updated = await renameLessonRecord(id, cleanTitle);
+      setLessons((current) =>
+        current.map((lesson) => (lesson.id === id ? updated : lesson)),
+      );
+      return true;
+    } catch (renameError) {
+      setError(getErrorMessage(renameError, 'Could not rename lesson.'));
+      return false;
+    }
+  }, []);
 
   const moveLesson = useCallback(
-    async (
-      lessonId: string,
-      folderId: string | null,
-    ) => {
-      const currentLesson = lessons.find(
-        (lesson) => lesson.id === lessonId,
-      );
+    async (lessonId: string, folderId: string | null) => {
+      const currentLesson = lessons.find((lesson) => lesson.id === lessonId);
+      if (!currentLesson || currentLesson.folder_id === folderId) return true;
 
-      if (
-        !currentLesson ||
-        currentLesson.folder_id === folderId
-      ) {
-        return true;
-      }
-
-      const order = nextSortOrder(folderId);
       setError(null);
-
       try {
         const updated = await moveLessonRecord(
           lessonId,
           folderId,
-          order,
+          nextSortOrder(folderId),
         );
-
         setLessons((current) =>
-          current.map((lesson) =>
-            lesson.id === lessonId
-              ? updated
-              : lesson,
-          ),
+          current.map((lesson) => (lesson.id === lessonId ? updated : lesson)),
         );
-
         return true;
       } catch (moveError) {
-        setError(
-          getErrorMessage(
-            moveError,
-            'The lesson could not be moved.',
-          ),
-        );
+        setError(getErrorMessage(moveError, 'Could not move lesson.'));
         return false;
       }
     },
@@ -416,114 +236,54 @@ export function useLibrary() {
   );
 
   const reorderLesson = useCallback(
-    async (
-      draggedId: string,
-      targetId: string,
-    ) => {
-      if (
-        !canReorder ||
-        draggedId === targetId
-      ) {
-        return;
-      }
+    async (draggedId: string, targetId: string) => {
+      if (!canReorder || draggedId === targetId) return;
 
       const collection = sortLessons(
-        lessons.filter((lesson) =>
-          lessonMatchesView(lesson, activeView),
-        ),
+        lessons.filter((lesson) => lessonMatchesView(lesson, activeView)),
         activeView,
       );
-
-      const sourceIndex = collection.findIndex(
-        (lesson) => lesson.id === draggedId,
-      );
-
-      const targetIndex = collection.findIndex(
-        (lesson) => lesson.id === targetId,
-      );
-
-      if (
-        sourceIndex === -1 ||
-        targetIndex === -1
-      ) {
-        return;
-      }
+      const sourceIndex = collection.findIndex((lesson) => lesson.id === draggedId);
+      const targetIndex = collection.findIndex((lesson) => lesson.id === targetId);
+      if (sourceIndex === -1 || targetIndex === -1) return;
 
       const reordered = [...collection];
-      const [dragged] = reordered.splice(
-        sourceIndex,
-        1,
-      );
+      const [dragged] = reordered.splice(sourceIndex, 1);
       reordered.splice(targetIndex, 0, dragged);
 
-      const updates = reordered.map(
-        (lesson, index) => ({
-          id: lesson.id,
-          sort_order: index,
-        }),
-      );
+      const updates = reordered.map((lesson, index) => ({
+        id: lesson.id,
+        sort_order: index,
+      }));
 
       setLessons((current) =>
         current.map((lesson) => {
-          const update = updates.find(
-            (item) => item.id === lesson.id,
-          );
-
-          return update
-            ? {
-                ...lesson,
-                sort_order: update.sort_order,
-              }
-            : lesson;
+          const update = updates.find((item) => item.id === lesson.id);
+          return update ? { ...lesson, sort_order: update.sort_order } : lesson;
         }),
       );
 
       try {
         await saveLessonOrder(updates);
       } catch (orderError) {
-        setError(
-          getErrorMessage(
-            orderError,
-            'The lesson order could not be saved.',
-          ),
-        );
+        setError(getErrorMessage(orderError, 'Could not save order.'));
         void load();
       }
     },
-    [
-      activeView,
-      canReorder,
-      lessons,
-      load,
-    ],
+    [activeView, canReorder, lessons, load],
   );
 
-  const deleteLesson = useCallback(
-    async (lesson: MediaFile) => {
-      setError(null);
-
-      try {
-        await deleteLessonRecord(lesson);
-
-        setLessons((current) =>
-          current.filter(
-            (item) => item.id !== lesson.id,
-          ),
-        );
-
-        return true;
-      } catch (deleteError) {
-        setError(
-          getErrorMessage(
-            deleteError,
-            'The lesson could not be deleted.',
-          ),
-        );
-        return false;
-      }
-    },
-    [],
-  );
+  const deleteLesson = useCallback(async (lesson: MediaFile) => {
+    setError(null);
+    try {
+      await deleteLessonRecord(lesson);
+      setLessons((current) => current.filter((item) => item.id !== lesson.id));
+      return true;
+    } catch (deleteError) {
+      setError(getErrorMessage(deleteError, 'Could not delete lesson.'));
+      return false;
+    }
+  }, []);
 
   return {
     folders,
@@ -537,12 +297,10 @@ export function useLibrary() {
     error,
     counts,
     canReorder,
-
     setActiveView,
     setSearch,
     setTypeFilter,
     setError,
-
     load,
     createFolder,
     renameFolder,

@@ -6,8 +6,8 @@ import {
 } from 'react';
 
 const VIEWPORT_MARGIN = 8;
-const MAX_POPUP_WIDTH = 440;
-const MAX_POPUP_HEIGHT = 360;
+const MAX_POPUP_WIDTH = 480;
+const MAX_POPUP_HEIGHT = 460;
 
 interface ViewportMetrics {
   width: number;

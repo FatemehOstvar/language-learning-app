@@ -3,6 +3,7 @@ import {
   AUDIO_EXTENSIONS,
   DOCUMENT_EXTENSIONS,
   SUBTITLE_EXTENSIONS,
+  TEXT_EXTENSIONS,
 } from '@/features/upload/config/uploadConfig';
 import type { UploadDocumentType } from '@/features/upload/model/types';
 
@@ -27,6 +28,10 @@ export function isDocumentFile(file: File): boolean {
 
 export function isSubtitleFile(file: File): boolean {
   return SUBTITLE_EXTENSIONS.has(getFileExtension(file.name));
+}
+
+export function isTextFile(file: File): boolean {
+  return file.type === 'text/plain' || file.type === 'text/markdown' || TEXT_EXTENSIONS.has(getFileExtension(file.name));
 }
 
 export function getDocumentType(file: File): UploadDocumentType {

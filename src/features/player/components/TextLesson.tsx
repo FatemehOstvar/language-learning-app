@@ -59,6 +59,7 @@ export function TextLesson({ media, focusMode }: PlayerLessonProps) {
 
       {vocabulary.popup && (
         <WordPopup
+          key={`${vocabulary.popup.word}-${vocabulary.popup.x}-${vocabulary.popup.y}`}
           {...vocabulary.popup}
           onClose={vocabulary.closePopup}
           onSaved={vocabulary.handlePopupSaved}

@@ -1,25 +1,13 @@
-import {
-  Folder,
-  FolderOpen,
-  Loader2,
-  X,
-} from 'lucide-react';
-import {
-  useEffect,
-  useState,
-} from 'react';
-import LibraryDialog, {
-  DeleteWarning,
-} from '@/features/library/components/LibraryDialog';
+import { Folder, FolderOpen, Loader2, X } from 'lucide-react';
+import { useEffect, useState } from 'react';
+import LibraryDialog, { DeleteWarning } from '@/features/library/components/LibraryDialog';
 import LibraryHeader from '@/features/library/components/LibraryHeader';
 import LibrarySidebar from '@/features/library/components/LibrarySidebar';
 import LibraryToolbar from '@/features/library/components/LibraryToolbar';
 import LessonList from '@/features/library/components/LessonList';
 import { useLibrary } from '@/features/library/hooks/useLibrary';
-import type {
-  LibraryFolder,
-  MediaFile,
-} from '@/shared/api/supabase';
+import { getFolderPathLabel } from '@/features/library/utils/folderNaming';
+import type { LibraryFolder, MediaFile } from '@/shared/api/supabase';
 
 interface LibraryWorkspaceProps {
   activeId: string | null;
@@ -31,41 +19,25 @@ export default function LibraryWorkspace({
   onSelect,
 }: LibraryWorkspaceProps) {
   const library = useLibrary();
-
-  const [mobileFoldersOpen, setMobileFoldersOpen] =
-    useState(false);
-
-  const [createFolderOpen, setCreateFolderOpen] =
-    useState(false);
-
-  const [newFolderName, setNewFolderName] =
-    useState('');
-
-  const [folderToDelete, setFolderToDelete] =
-    useState<LibraryFolder | null>(null);
-
-  const [lessonToMove, setLessonToMove] =
-    useState<MediaFile | null>(null);
-
-  const [lessonToDelete, setLessonToDelete] =
-    useState<MediaFile | null>(null);
-
-  const [moveTarget, setMoveTarget] =
-    useState<string>('unfiled');
+  const [mobileFoldersOpen, setMobileFoldersOpen] = useState(false);
+  const [createFolderOpen, setCreateFolderOpen] = useState(false);
+  const [newFolderName, setNewFolderName] = useState('');
+  const [folderToDelete, setFolderToDelete] = useState<LibraryFolder | null>(null);
+  const [lessonToMove, setLessonToMove] = useState<MediaFile | null>(null);
+  const [lessonToDelete, setLessonToDelete] = useState<MediaFile | null>(null);
+  const [moveTarget, setMoveTarget] = useState('unfiled');
 
   useEffect(() => {
-    if (!lessonToMove) {
-      return;
-    }
-
-    setMoveTarget(
-      lessonToMove.folder_id ?? 'unfiled',
-    );
+    if (lessonToMove) setMoveTarget(lessonToMove.folder_id ?? 'unfiled');
   }, [lessonToMove]);
 
   const hasSearchOrFilter =
-    library.search.trim() !== '' ||
-    library.typeFilter !== 'all';
+    library.search.trim() !== '' || library.typeFilter !== 'all';
+
+  const openCreateFolder = () => {
+    setNewFolderName('');
+    setCreateFolderOpen(true);
+  };
 
   const sidebar = (
     <LibrarySidebar
@@ -76,10 +48,7 @@ export default function LibraryWorkspace({
         library.setActiveView(view);
         setMobileFoldersOpen(false);
       }}
-      onCreateFolder={() => {
-        setNewFolderName('');
-        setCreateFolderOpen(true);
-      }}
+      onCreateFolder={openCreateFolder}
       onRenameFolder={library.renameFolder}
       onDeleteFolder={setFolderToDelete}
       onMoveLesson={library.moveLesson}
@@ -88,73 +57,47 @@ export default function LibraryWorkspace({
 
   if (library.loading) {
     return (
-      <div className="flex min-h-[calc(100vh-4rem)] items-center justify-center text-slate-400">
-        <Loader2 className="h-6 w-6 animate-spin" />
+      <div className="flex min-h-[calc(100vh-3.5rem)] items-center justify-center text-slate-400">
+        <Loader2 className="h-5 w-5 animate-spin" />
       </div>
     );
   }
 
   return (
-    <div className="min-h-[calc(100vh-4rem)] bg-slate-50/70">
-      <div className="mx-auto max-w-6xl px-4 py-7 sm:px-6 sm:py-9">
-        <LibraryHeader
-          lessonCount={library.lessons.length}
-          onCreateFolder={() => {
-            setNewFolderName('');
-            setCreateFolderOpen(true);
-          }}
-        />
+    <div className="min-h-[calc(100vh-3.5rem)] bg-slate-50/50">
+      <div className="mx-auto max-w-6xl px-4 py-6 sm:px-6">
+        <LibraryHeader lessonCount={library.lessons.length} onCreateFolder={openCreateFolder} />
 
         {library.error && (
-          <div
-            role="alert"
-            className="mt-5 flex items-start justify-between gap-4 rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700"
-          >
+          <div role="alert" className="mt-3 flex items-center justify-between gap-3 rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-xs text-red-700">
             <span>{library.error}</span>
-
-            <button
-              type="button"
-              onClick={() =>
-                library.setError(null)
-              }
-              aria-label="Dismiss error"
-              className="rounded p-0.5 text-red-400 hover:bg-red-100"
-            >
-              <X className="h-4 w-4" />
+            <button type="button" onClick={() => library.setError(null)} aria-label="Dismiss" className="p-1 text-red-400">
+              <X className="h-3.5 w-3.5" />
             </button>
           </div>
         )}
 
-        <div className="mt-6 grid gap-4 lg:grid-cols-[220px_minmax(0,1fr)]">
-          <aside className="hidden rounded-2xl border border-slate-200 bg-white p-3 lg:block">
+        <div className="mt-4 grid gap-3 lg:grid-cols-[200px_minmax(0,1fr)]">
+          <aside className="hidden rounded-xl border border-slate-200 bg-white p-2.5 lg:block">
             {sidebar}
           </aside>
 
-         <section className="min-w-0 overflow-visible rounded-2xl border border-slate-200 bg-white">
+          <section className="min-w-0 overflow-visible rounded-xl border border-slate-200 bg-white">
             <LibraryToolbar
               activeViewName={library.activeViewName}
-              visibleCount={
-                library.visibleLessons.length
-              }
+              visibleCount={library.visibleLessons.length}
               search={library.search}
               typeFilter={library.typeFilter}
               canReorder={library.canReorder}
               onSearchChange={library.setSearch}
-              onTypeFilterChange={
-                library.setTypeFilter
-              }
-              onOpenFolders={() =>
-                setMobileFoldersOpen(true)
-              }
+              onTypeFilterChange={library.setTypeFilter}
+              onOpenFolders={() => setMobileFoldersOpen(true)}
             />
-
             <LessonList
               lessons={library.visibleLessons}
               activeId={activeId}
               canReorder={library.canReorder}
-              hasSearchOrFilter={
-                hasSearchOrFilter
-              }
+              hasSearchOrFilter={hasSearchOrFilter}
               onOpen={onSelect}
               onRename={library.renameLesson}
               onMove={setLessonToMove}
@@ -167,281 +110,156 @@ export default function LibraryWorkspace({
 
       {mobileFoldersOpen && (
         <div className="fixed inset-0 z-50 lg:hidden">
-          <button
-            type="button"
-            aria-label="Close folder drawer"
-            onClick={() =>
-              setMobileFoldersOpen(false)
-            }
-            className="absolute inset-0 bg-slate-950/30"
-          />
-
-          <aside className="absolute inset-y-0 left-0 w-[min(82vw,300px)] overflow-y-auto border-r border-slate-200 bg-white p-4 shadow-2xl">
-            <div className="mb-4 flex items-center justify-between">
-              <div className="flex items-center gap-2">
-                <FolderOpen className="h-4 w-4 text-slate-500" />
-                <p className="text-sm font-semibold text-slate-900">
-                  Folders
-                </p>
+          <button type="button" aria-label="Close" onClick={() => setMobileFoldersOpen(false)} className="absolute inset-0 bg-slate-950/25" />
+          <aside className="absolute inset-y-0 left-0 w-[min(82vw,280px)] overflow-y-auto border-r border-slate-200 bg-white p-3 shadow-xl">
+            <div className="mb-3 flex items-center justify-between px-1">
+              <div className="flex items-center gap-2 text-sm font-medium text-slate-900">
+                <FolderOpen className="h-4 w-4" /> Folders
               </div>
-
-              <button
-                type="button"
-                onClick={() =>
-                  setMobileFoldersOpen(false)
-                }
-                aria-label="Close folders"
-                className="rounded-lg p-1.5 text-slate-400 hover:bg-slate-100"
-              >
+              <button type="button" onClick={() => setMobileFoldersOpen(false)} aria-label="Close" className="p-1.5 text-slate-400">
                 <X className="h-4 w-4" />
               </button>
             </div>
-
             {sidebar}
           </aside>
         </div>
       )}
 
-      <LibraryDialog
-        open={createFolderOpen}
-        title="New folder"
-        description="Create one level of folders to organize your lessons."
-        onClose={() =>
-          setCreateFolderOpen(false)
-        }
-      >
+      <LibraryDialog open={createFolderOpen} title="New folder" onClose={() => setCreateFolderOpen(false)}>
         <form
           onSubmit={(event) => {
             event.preventDefault();
-
-            void library
-              .createFolder(newFolderName)
-              .then((folder) => {
-                if (folder) {
-                  setCreateFolderOpen(false);
-                  setNewFolderName('');
-                }
-              });
+            void library.createFolder(newFolderName).then((folder) => {
+              if (folder) {
+                setCreateFolderOpen(false);
+                setNewFolderName('');
+              }
+            });
           }}
         >
-          <label
-            htmlFor="new-folder-name"
-            className="mb-1.5 block text-sm font-medium text-slate-800"
-          >
-            Folder name
-          </label>
-
           <input
-            id="new-folder-name"
+            aria-label="Folder name"
             value={newFolderName}
             maxLength={80}
             autoFocus
-            onChange={(event) =>
-              setNewFolderName(
-                event.target.value,
-              )
-            }
-            placeholder="Podcasts"
-            className="h-10 w-full rounded-xl border border-slate-200 px-3 text-sm outline-none focus:border-slate-400 focus:ring-2 focus:ring-slate-100"
+            onChange={(event) => setNewFolderName(event.target.value)}
+            placeholder="Name"
+            className="h-10 w-full rounded-lg border border-slate-200 px-3 text-sm outline-none focus:border-slate-400"
           />
-
-          <div className="mt-5 flex justify-end gap-2">
-            <button
-              type="button"
-              onClick={() =>
-                setCreateFolderOpen(false)
-              }
-              className="h-9 rounded-lg px-3 text-sm font-medium text-slate-600 hover:bg-slate-100"
-            >
-              Cancel
-            </button>
-
-            <button
-              type="submit"
-              disabled={!newFolderName.trim()}
-              className="h-9 rounded-lg bg-slate-900 px-3.5 text-sm font-medium text-white hover:bg-slate-800 disabled:cursor-not-allowed disabled:bg-slate-200"
-            >
-              Create folder
-            </button>
-          </div>
+          <DialogActions
+            onCancel={() => setCreateFolderOpen(false)}
+            action="Create"
+            disabled={!newFolderName.trim()}
+          />
         </form>
       </LibraryDialog>
 
       <LibraryDialog
         open={Boolean(folderToDelete)}
         title="Delete folder?"
-        description={
-          folderToDelete
-            ? `Delete “${folderToDelete.name}”?`
-            : undefined
-        }
-        onClose={() =>
-          setFolderToDelete(null)
-        }
+        description={folderToDelete ? getFolderPathLabel(folderToDelete.name) : undefined}
+        onClose={() => setFolderToDelete(null)}
       >
         <DeleteWarning />
-
-        <div className="flex justify-end gap-2">
-          <button
-            type="button"
-            onClick={() =>
-              setFolderToDelete(null)
-            }
-            className="h-9 rounded-lg px-3 text-sm font-medium text-slate-600 hover:bg-slate-100"
-          >
-            Cancel
-          </button>
-
-          <button
-            type="button"
-            onClick={() => {
-              if (!folderToDelete) {
-                return;
-              }
-
-              void library
-                .removeFolder(
-                  folderToDelete.id,
-                )
-                .then((deleted) => {
-                  if (deleted) {
-                    setFolderToDelete(null);
-                  }
-                });
-            }}
-            className="h-9 rounded-lg bg-red-600 px-3.5 text-sm font-medium text-white hover:bg-red-700"
-          >
-            Delete folder
-          </button>
-        </div>
+        <DialogActions
+          onCancel={() => setFolderToDelete(null)}
+          action="Delete"
+          danger
+          onAction={() => {
+            if (!folderToDelete) return;
+            void library.removeFolder(folderToDelete.id).then((deleted) => {
+              if (deleted) setFolderToDelete(null);
+            });
+          }}
+        />
       </LibraryDialog>
 
       <LibraryDialog
         open={Boolean(lessonToMove)}
-        title="Move lesson"
+        title="Move"
         description={lessonToMove?.title}
-        onClose={() =>
-          setLessonToMove(null)
-        }
+        onClose={() => setLessonToMove(null)}
       >
-        <label
-          htmlFor="move-folder"
-          className="mb-1.5 block text-sm font-medium text-slate-800"
-        >
-          Destination
-        </label>
-
         <select
-          id="move-folder"
+          aria-label="Destination"
           value={moveTarget}
-          onChange={(event) =>
-            setMoveTarget(event.target.value)
-          }
-          className="h-10 w-full rounded-xl border border-slate-200 bg-white px-3 text-sm text-slate-700 outline-none focus:border-slate-400"
+          onChange={(event) => setMoveTarget(event.target.value)}
+          className="h-10 w-full rounded-lg border border-slate-200 bg-white px-3 text-sm text-slate-700 outline-none focus:border-slate-400"
         >
-          <option value="unfiled">
-            Unfiled
-          </option>
-
+          <option value="unfiled">Unfiled</option>
           {library.folders.map((folder) => (
-            <option
-              key={folder.id}
-              value={folder.id}
-            >
-              {folder.name}
+            <option key={folder.id} value={folder.id}>
+              {getFolderPathLabel(folder.name)}
             </option>
           ))}
         </select>
-
-        <div className="mt-5 flex justify-end gap-2">
-          <button
-            type="button"
-            onClick={() =>
-              setLessonToMove(null)
-            }
-            className="h-9 rounded-lg px-3 text-sm font-medium text-slate-600 hover:bg-slate-100"
-          >
-            Cancel
-          </button>
-
-          <button
-            type="button"
-            onClick={() => {
-              if (!lessonToMove) {
-                return;
-              }
-
-              const folderId =
-                moveTarget === 'unfiled'
-                  ? null
-                  : moveTarget;
-
-              void library
-                .moveLesson(
-                  lessonToMove.id,
-                  folderId,
-                )
-                .then((moved) => {
-                  if (moved) {
-                    setLessonToMove(null);
-                  }
-                });
-            }}
-            className="inline-flex h-9 items-center gap-2 rounded-lg bg-slate-900 px-3.5 text-sm font-medium text-white hover:bg-slate-800"
-          >
-            <Folder className="h-4 w-4" />
-            Move
-          </button>
-        </div>
+        <DialogActions
+          onCancel={() => setLessonToMove(null)}
+          action="Move"
+          icon={Folder}
+          onAction={() => {
+            if (!lessonToMove) return;
+            const folderId = moveTarget === 'unfiled' ? null : moveTarget;
+            void library.moveLesson(lessonToMove.id, folderId).then((moved) => {
+              if (moved) setLessonToMove(null);
+            });
+          }}
+        />
       </LibraryDialog>
 
       <LibraryDialog
         open={Boolean(lessonToDelete)}
         title="Delete lesson?"
         description={lessonToDelete?.title}
-        onClose={() =>
-          setLessonToDelete(null)
-        }
+        onClose={() => setLessonToDelete(null)}
       >
-        <p className="text-sm leading-6 text-slate-600">
-          The lesson will be removed from the
-          library. Its uploaded audio or document
-          will also be removed when the stored URL
-          can be resolved.
-        </p>
-
-        <div className="mt-5 flex justify-end gap-2">
-          <button
-            type="button"
-            onClick={() =>
-              setLessonToDelete(null)
-            }
-            className="h-9 rounded-lg px-3 text-sm font-medium text-slate-600 hover:bg-slate-100"
-          >
-            Cancel
-          </button>
-
-          <button
-            type="button"
-            onClick={() => {
-              if (!lessonToDelete) {
-                return;
-              }
-
-              void library
-                .deleteLesson(lessonToDelete)
-                .then((deleted) => {
-                  if (deleted) {
-                    setLessonToDelete(null);
-                  }
-                });
-            }}
-            className="h-9 rounded-lg bg-red-600 px-3.5 text-sm font-medium text-white hover:bg-red-700"
-          >
-            Delete lesson
-          </button>
-        </div>
+        <DialogActions
+          onCancel={() => setLessonToDelete(null)}
+          action="Delete"
+          danger
+          onAction={() => {
+            if (!lessonToDelete) return;
+            void library.deleteLesson(lessonToDelete).then((deleted) => {
+              if (deleted) setLessonToDelete(null);
+            });
+          }}
+        />
       </LibraryDialog>
+    </div>
+  );
+}
+
+function DialogActions({
+  onCancel,
+  action,
+  onAction,
+  disabled = false,
+  danger = false,
+  icon: Icon,
+}: {
+  onCancel: () => void;
+  action: string;
+  onAction?: () => void;
+  disabled?: boolean;
+  danger?: boolean;
+  icon?: typeof Folder;
+}) {
+  return (
+    <div className="mt-4 flex justify-end gap-2">
+      <button type="button" onClick={onCancel} className="h-9 rounded-lg px-3 text-sm text-slate-500 hover:bg-slate-100">
+        Cancel
+      </button>
+      <button
+        type={onAction ? 'button' : 'submit'}
+        disabled={disabled}
+        onClick={onAction}
+        className={`inline-flex h-9 items-center gap-1.5 rounded-lg px-3.5 text-sm font-medium text-white disabled:bg-slate-200 ${
+          danger ? 'bg-red-600 hover:bg-red-700' : 'bg-slate-900 hover:bg-slate-800'
+        }`}
+      >
+        {Icon && <Icon className="h-3.5 w-3.5" />}
+        {action}
+      </button>
     </div>
   );
 }

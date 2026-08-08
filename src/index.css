@@ -10,3 +10,9 @@
 .animate-fade-in {
   animation: fade-in 0.25s ease-out;
 }
+
+@layer components {
+  .tutorial-key {
+    @apply inline-flex min-h-7 min-w-8 items-center justify-center rounded-md border border-slate-200 bg-white px-2 py-1 font-mono text-[11px] font-semibold text-slate-600 shadow-sm;
+  }
+}

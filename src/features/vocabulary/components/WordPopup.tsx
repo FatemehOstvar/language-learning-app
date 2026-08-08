@@ -7,13 +7,19 @@ import {
   normalizeWord,
   type WordStatus,
 } from '@/features/vocabulary/api/leitner';
-import { usePopupDismiss } from '@/features/vocabulary/hooks/useDismissiblePopup';
-import { useWordPopupForm } from '@/features/vocabulary/hooks/useWordPopupForm';
-import { useWordPopupPosition } from '@/features/vocabulary/hooks/useAnchoredPopupPosition';
+import DictionaryDefinitionCard from '@/features/vocabulary/components/DictionaryDefinitionCard';
+import GermanMorphologyCard from '@/features/morphology/components/GermanMorphologyCard';
 import WordNoteField from '@/features/vocabulary/components/WordNoteField';
 import WordPopupHeader from '@/features/vocabulary/components/WordPopupHeader';
 import WordPopupSubmitButton from '@/features/vocabulary/components/WordPopupSubmitButton';
 import WordStatusSelector from '@/features/vocabulary/components/WordStatusSelector';
+import { getLanguageDirection } from '@/features/vocabulary/config/languageConfig';
+import { useLanguagePreferences } from '@/features/settings/context/LanguagePreferencesContext';
+import { useGermanMorphology } from '@/features/morphology/hooks/useGermanMorphology';
+import { useDictionaryLookup } from '@/features/vocabulary/hooks/useDictionaryLookup';
+import { usePopupDismiss } from '@/features/vocabulary/hooks/useDismissiblePopup';
+import { useWordPopupForm } from '@/features/vocabulary/hooks/useWordPopupForm';
+import { useWordPopupPosition } from '@/features/vocabulary/hooks/useAnchoredPopupPosition';
 
 interface WordPopupProps {
   word: string;
@@ -45,9 +51,31 @@ export default function WordPopup({
   onSaved,
 }: WordPopupProps) {
   const cleanWord = useMemo(() => normalizeWord(word), [word]);
+  const dictionaryWord = useMemo(
+    () => word.replace(/[^\p{L}\p{N}'-]/gu, '').trim(),
+    [word],
+  );
   const position = useWordPopupPosition(x, y);
   const popupRef = usePopupDismiss(onClose);
   const noteRef = useRef<HTMLTextAreaElement>(null);
+  const { preferences } = useLanguagePreferences();
+
+  // Wikimedia currently exposes the structured cross-language definition
+  // endpoint on English Wiktionary. Keep the user's primary native language
+  // persisted for the planned multilingual dictionary/layout, but use English
+  // definitions until an equivalent structured source is available.
+  const definitionLanguage = 'en';
+  const dictionaryDirection = getLanguageDirection(definitionLanguage);
+  const lookupWord = dictionaryWord || cleanWord;
+  const dictionary = useDictionaryLookup({
+    word: lookupWord,
+    sourceLanguage: preferences.learningLanguage,
+    definitionLanguage,
+  });
+  const morphology = useGermanMorphology({
+    word: lookupWord,
+    enabled: preferences.learningLanguage === 'de',
+  });
 
   const {
     note,
@@ -147,12 +175,30 @@ export default function WordPopup({
       className="fixed z-[100] flex flex-col overflow-hidden rounded-xl border border-slate-200 bg-white shadow-2xl"
     >
       <WordPopupHeader
-        word={cleanWord || word}
+        word={dictionaryWord || cleanWord || word}
         sentence={sentence}
         onClose={onClose}
       />
 
       <div className="min-h-0 overflow-y-auto p-2">
+        <DictionaryDefinitionCard
+          loading={dictionary.loading}
+          result={dictionary.result}
+          error={dictionary.error}
+          sourceLanguage={preferences.learningLanguage}
+          definitionLanguage={definitionLanguage}
+          direction={dictionaryDirection}
+        />
+
+        {preferences.learningLanguage === 'de' && (
+          <GermanMorphologyCard
+            loading={morphology.loading}
+            result={morphology.result}
+            error={morphology.error}
+            displayLanguage={definitionLanguage}
+          />
+        )}
+
         <div className="grid gap-2 min-[390px]:grid-cols-[132px_minmax(0,1fr)]">
           <WordStatusSelector
             savingStatus={savingStatus}

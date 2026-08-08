@@ -1,10 +1,7 @@
 import type { RefObject } from 'react';
 import { Captions, FileAudio } from 'lucide-react';
 import FileDropzone from '@/features/upload/components/FileDropzone';
-import {
-  AUDIO_ACCEPT,
-  SUBTITLE_ACCEPT,
-} from '@/features/upload/config/uploadConfig';
+import { AUDIO_ACCEPT, SUBTITLE_ACCEPT } from '@/features/upload/config/uploadConfig';
 import type { DragTarget } from '@/features/upload/model/types';
 
 interface AudioSubtitleFieldsProps {
@@ -21,63 +18,37 @@ interface AudioSubtitleFieldsProps {
   onDraggingChange: (target: DragTarget) => void;
 }
 
-export default function AudioSubtitleFields({
-  audioFile,
-  subtitleFile,
-  dragging,
-  disabled,
-  audioInputRef,
-  subtitleInputRef,
-  onAudioFile,
-  onSubtitleFile,
-  onRemoveAudio,
-  onRemoveSubtitle,
-  onDraggingChange,
-}: AudioSubtitleFieldsProps) {
+export default function AudioSubtitleFields(props: AudioSubtitleFieldsProps) {
   return (
-    <section>
-      <div className="mb-3">
-        <h2 className="text-sm font-medium text-slate-800">Files</h2>
-        <p className="mt-1 text-xs leading-5 text-slate-500">
-          Add the audio and its timed subtitle file.
-        </p>
-      </div>
-
-      <div className="grid gap-3 sm:grid-cols-2">
-        <FileDropzone
-          label="Audio file"
-          description="MP3, M4A, WAV, OGG, AAC, FLAC or WebM"
-          icon={FileAudio}
-          accent="emerald"
-          file={audioFile}
-          dragging={dragging === 'audio'}
-          disabled={disabled}
-          inputRef={audioInputRef}
-          accept={AUDIO_ACCEPT}
-          onFile={onAudioFile}
-          onRemove={onRemoveAudio}
-          onDraggingChange={(active) =>
-            onDraggingChange(active ? 'audio' : null)
-          }
-        />
-
-        <FileDropzone
-          label="Subtitle file"
-          description="SRT or WebVTT"
-          icon={Captions}
-          accent="amber"
-          file={subtitleFile}
-          dragging={dragging === 'subtitle'}
-          disabled={disabled}
-          inputRef={subtitleInputRef}
-          accept={SUBTITLE_ACCEPT}
-          onFile={onSubtitleFile}
-          onRemove={onRemoveSubtitle}
-          onDraggingChange={(active) =>
-            onDraggingChange(active ? 'subtitle' : null)
-          }
-        />
-      </div>
-    </section>
+    <div className="grid gap-2 sm:grid-cols-2">
+      <FileDropzone
+        label="Audio"
+        description="MP3, M4A, WAV, OGG, AAC, FLAC or WebM"
+        icon={FileAudio}
+        accent="emerald"
+        file={props.audioFile}
+        dragging={props.dragging === 'audio'}
+        disabled={props.disabled}
+        inputRef={props.audioInputRef}
+        accept={AUDIO_ACCEPT}
+        onFile={props.onAudioFile}
+        onRemove={props.onRemoveAudio}
+        onDraggingChange={(active) => props.onDraggingChange(active ? 'audio' : null)}
+      />
+      <FileDropzone
+        label="Subtitles"
+        description="SRT or WebVTT"
+        icon={Captions}
+        accent="amber"
+        file={props.subtitleFile}
+        dragging={props.dragging === 'subtitle'}
+        disabled={props.disabled}
+        inputRef={props.subtitleInputRef}
+        accept={SUBTITLE_ACCEPT}
+        onFile={props.onSubtitleFile}
+        onRemove={props.onRemoveSubtitle}
+        onDraggingChange={(active) => props.onDraggingChange(active ? 'subtitle' : null)}
+      />
+    </div>
   );
 }

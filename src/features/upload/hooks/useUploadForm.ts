@@ -11,6 +11,7 @@ import {
   isAudioFile,
   isDocumentFile,
   isSubtitleFile,
+  isTextFile,
 } from '@/features/upload/utils/fileUtils';
 import {
   createAudioDocumentLesson,
@@ -35,6 +36,7 @@ export function useUploadForm({ onUploaded }: UseUploadFormOptions) {
   const [subtitleFile, setSubtitleFile] = useState<File | null>(null);
   const [documentFile, setDocumentFile] = useState<File | null>(null);
   const [textBoxContent, setTextBoxContent] = useState('');
+  const [textSourceFileName, setTextSourceFileName] = useState<string | null>(null);
   const [dragging, setDragging] = useState<DragTarget>(null);
   const [uploading, setUploading] = useState(false);
   const [progress, setProgress] = useState(0);
@@ -79,6 +81,30 @@ export function useUploadForm({ onUploaded }: UseUploadFormOptions) {
     (value: string) => {
       setTextBoxContent(value);
       resetMessages();
+    },
+    [resetMessages],
+  );
+
+  const handleTextFile = useCallback(
+    async (file: File) => {
+      resetMessages();
+      if (!isTextFile(file)) {
+        setError('Please select a plain text or Markdown file.');
+        return;
+      }
+
+      try {
+        const content = (await file.text()).replace(/^\uFEFF/, '');
+        if (!content.trim()) {
+          setError('The text file is empty.');
+          return;
+        }
+        setTextBoxContent(content);
+        setTextSourceFileName(file.name);
+        setLessonTitle((title) => title.trim() || getFileTitle(file.name));
+      } catch {
+        setError('The text file could not be read.');
+      }
     },
     [resetMessages],
   );
@@ -168,6 +194,7 @@ export function useUploadForm({ onUploaded }: UseUploadFormOptions) {
     setSubtitleFile(null);
     setDocumentFile(null);
     setTextBoxContent('');
+    setTextSourceFileName(null);
     setProgress(0);
     setProgressMessage('');
     clearFileInput(audioInputRef);
@@ -191,6 +218,7 @@ export function useUploadForm({ onUploaded }: UseUploadFormOptions) {
     subtitleFile,
     documentFile,
     textBoxContent,
+    textSourceFileName,
   ]);
 
   const handleSubmit = useCallback(async () => {
@@ -256,6 +284,7 @@ export function useUploadForm({ onUploaded }: UseUploadFormOptions) {
         lesson = await createTextLesson({
           title,
           text: textBoxContent,
+          sourceFilename: textSourceFileName,
           onMessage: setProgressMessage,
         });
       }
@@ -308,6 +337,7 @@ export function useUploadForm({ onUploaded }: UseUploadFormOptions) {
     subtitleFile,
     documentFile,
     textBoxContent,
+    textSourceFileName,
     onUploaded,
     resetForm,
   ]);
@@ -320,6 +350,7 @@ export function useUploadForm({ onUploaded }: UseUploadFormOptions) {
     subtitleFile,
     documentFile,
     textBoxContent,
+    textSourceFileName,
     dragging,
     uploading,
     progress,
@@ -336,6 +367,7 @@ export function useUploadForm({ onUploaded }: UseUploadFormOptions) {
     handleTabChange,
     handleTitleChange,
     handleTextChange,
+    handleTextFile,
     handleAudioFile,
     handleCompanionFile,
     handleSubtitleFile,

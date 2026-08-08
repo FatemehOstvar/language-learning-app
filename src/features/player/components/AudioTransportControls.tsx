@@ -43,10 +43,10 @@ export function AudioTransportControls({
     >
       <button
         type="button"
-        onClick={() => onSkip(-10)}
+        onClick={() => onSkip(-3)}
         disabled={disabled}
-        aria-label="Go back 10 seconds"
-        title="Back 10 seconds"
+        aria-label="Go back 3 seconds"
+        title="Back 3 seconds (Left arrow)"
         className={iconButton}
       >
         <SkipBack className="h-3.5 w-3.5" />
@@ -57,6 +57,7 @@ export function AudioTransportControls({
         onClick={onTogglePlay}
         disabled={disabled}
         aria-label={isPlaying ? 'Pause audio' : 'Play audio'}
+        title={isPlaying ? 'Pause (Space)' : 'Play (Space)'}
         className={iconButton}
       >
         {isPlaying ? (
@@ -68,10 +69,10 @@ export function AudioTransportControls({
 
       <button
         type="button"
-        onClick={() => onSkip(10)}
+        onClick={() => onSkip(3)}
         disabled={disabled}
-        aria-label="Go forward 10 seconds"
-        title="Forward 10 seconds"
+        aria-label="Go forward 3 seconds"
+        title="Forward 3 seconds (Right arrow)"
         className={iconButton}
       >
         <SkipForward className="h-3.5 w-3.5" />

@@ -1,10 +1,7 @@
 import type { RefObject } from 'react';
 import { FileAudio, FileText } from 'lucide-react';
 import FileDropzone from '@/features/upload/components/FileDropzone';
-import {
-  AUDIO_ACCEPT,
-  DOCUMENT_ACCEPT,
-} from '@/features/upload/config/uploadConfig';
+import { AUDIO_ACCEPT, DOCUMENT_ACCEPT } from '@/features/upload/config/uploadConfig';
 import type { DragTarget } from '@/features/upload/model/types';
 
 interface AudioDocumentFieldsProps {
@@ -21,76 +18,37 @@ interface AudioDocumentFieldsProps {
   onDraggingChange: (target: DragTarget) => void;
 }
 
-export default function AudioDocumentFields({
-  audioFile,
-  companionFile,
-  dragging,
-  disabled,
-  audioInputRef,
-  companionInputRef,
-  onAudioFile,
-  onCompanionFile,
-  onRemoveAudio,
-  onRemoveCompanion,
-  onDraggingChange,
-}: AudioDocumentFieldsProps) {
+export default function AudioDocumentFields(props: AudioDocumentFieldsProps) {
   return (
-    <section>
-      <SectionHeading
-        title="Files"
-        description="Add the audio and its companion document."
+    <div className="grid gap-2 sm:grid-cols-2">
+      <FileDropzone
+        label="Audio"
+        description="MP3, M4A, WAV, OGG, AAC, FLAC or WebM"
+        icon={FileAudio}
+        accent="emerald"
+        file={props.audioFile}
+        dragging={props.dragging === 'audio'}
+        disabled={props.disabled}
+        inputRef={props.audioInputRef}
+        accept={AUDIO_ACCEPT}
+        onFile={props.onAudioFile}
+        onRemove={props.onRemoveAudio}
+        onDraggingChange={(active) => props.onDraggingChange(active ? 'audio' : null)}
       />
-
-      <div className="grid gap-3 sm:grid-cols-2">
-        <FileDropzone
-          label="Audio file"
-          description="MP3, M4A, WAV, OGG, AAC, FLAC or WebM"
-          icon={FileAudio}
-          accent="emerald"
-          file={audioFile}
-          dragging={dragging === 'audio'}
-          disabled={disabled}
-          inputRef={audioInputRef}
-          accept={AUDIO_ACCEPT}
-          onFile={onAudioFile}
-          onRemove={onRemoveAudio}
-          onDraggingChange={(active) =>
-            onDraggingChange(active ? 'audio' : null)
-          }
-        />
-
-        <FileDropzone
-          label="Companion document"
-          description="PDF or EPUB"
-          icon={FileText}
-          accent="violet"
-          file={companionFile}
-          dragging={dragging === 'companion'}
-          disabled={disabled}
-          inputRef={companionInputRef}
-          accept={DOCUMENT_ACCEPT}
-          onFile={onCompanionFile}
-          onRemove={onRemoveCompanion}
-          onDraggingChange={(active) =>
-            onDraggingChange(active ? 'companion' : null)
-          }
-        />
-      </div>
-    </section>
-  );
-}
-
-function SectionHeading({
-  title,
-  description,
-}: {
-  title: string;
-  description: string;
-}) {
-  return (
-    <div className="mb-3">
-      <h2 className="text-sm font-medium text-slate-800">{title}</h2>
-      <p className="mt-1 text-xs leading-5 text-slate-500">{description}</p>
+      <FileDropzone
+        label="Document"
+        description="PDF or EPUB"
+        icon={FileText}
+        accent="violet"
+        file={props.companionFile}
+        dragging={props.dragging === 'companion'}
+        disabled={props.disabled}
+        inputRef={props.companionInputRef}
+        accept={DOCUMENT_ACCEPT}
+        onFile={props.onCompanionFile}
+        onRemove={props.onRemoveCompanion}
+        onDraggingChange={(active) => props.onDraggingChange(active ? 'companion' : null)}
+      />
     </div>
   );
 }

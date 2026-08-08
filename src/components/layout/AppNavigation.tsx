@@ -1,6 +1,6 @@
-import { Upload, Headphones, Library, Brain } from 'lucide-react';
+import { Upload, Headphones, Library, Brain, Settings } from 'lucide-react';
 
-export type Page = 'upload' | 'player' | 'library' | 'leitner';
+export type Page = 'upload' | 'player' | 'library' | 'leitner' | 'settings';
 
 interface NavProps {
   current: Page;
@@ -10,41 +10,47 @@ interface NavProps {
 
 const navItems: { id: Page; label: string; icon: typeof Upload }[] = [
   { id: 'upload', label: 'Add', icon: Upload },
-  { id: 'player', label: 'Player', icon: Headphones },
   { id: 'library', label: 'Library', icon: Library },
-  { id: 'leitner', label: 'Leitner', icon: Brain },
+  { id: 'player', label: 'Player', icon: Headphones },
+  { id: 'leitner', label: 'Words', icon: Brain },
+  { id: 'settings', label: 'Settings', icon: Settings },
 ];
 
-export default function AppNavigation({ current, onNavigate, hasActiveMedia }: NavProps) {
+export default function AppNavigation({
+  current,
+  onNavigate,
+  hasActiveMedia,
+}: NavProps) {
   return (
-    <nav className="sticky top-0 z-50 backdrop-blur-lg bg-white/80 border-b border-slate-200">
-      <div className="max-w-5xl mx-auto px-4 sm:px-6 h-16 flex items-center justify-between">
-        <div className="flex items-center gap-2">
-          <div className="w-9 h-9 rounded-xl bg-gradient-to-br from-emerald-500 to-teal-600 flex items-center justify-center shadow-sm">
-            <Headphones className="w-5 h-5 text-white" />
-          </div>
-          <span className="font-semibold text-slate-800 text-lg tracking-tight">LinguaLab</span>
+    <nav className="sticky top-0 z-50 border-b border-slate-200 bg-white/95 backdrop-blur">
+      <div className="mx-auto flex h-14 max-w-6xl items-center justify-between px-3 sm:px-6">
+        <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-slate-900 text-sm font-semibold text-white">
+          L
         </div>
 
-        <div className="flex items-center gap-1">
+        <div className="flex items-center gap-0.5">
           {navItems.map((item) => {
             const Icon = item.icon;
             const active = current === item.id;
             const disabled = item.id === 'player' && !hasActiveMedia;
+
             return (
               <button
                 key={item.id}
+                type="button"
+                title={item.label}
+                aria-label={item.label}
                 onClick={() => !disabled && onNavigate(item.id)}
                 disabled={disabled}
-                className={`flex items-center gap-2 px-3 sm:px-4 py-2 rounded-lg text-sm font-medium transition-all duration-200 ${
+                className={`flex h-9 items-center gap-1.5 rounded-lg px-2.5 text-xs font-medium transition sm:px-3 ${
                   active
-                    ? 'bg-emerald-50 text-emerald-700'
+                    ? 'bg-slate-900 text-white'
                     : disabled
-                    ? 'text-slate-300 cursor-not-allowed'
-                    : 'text-slate-600 hover:bg-slate-100 hover:text-slate-900'
+                      ? 'cursor-not-allowed text-slate-300'
+                      : 'text-slate-500 hover:bg-slate-100 hover:text-slate-900'
                 }`}
               >
-                <Icon className="w-4 h-4" />
+                <Icon className="h-4 w-4" />
                 <span className="hidden sm:inline">{item.label}</span>
               </button>
             );

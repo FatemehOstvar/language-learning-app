@@ -22,3 +22,6 @@ export const AUDIO_EXTENSIONS = new Set([
 
 export const DOCUMENT_EXTENSIONS = new Set(['pdf', 'epub']);
 export const SUBTITLE_EXTENSIONS = new Set(['srt', 'vtt']);
+
+export const TEXT_ACCEPT = '.txt,.md,.text,text/plain,text/markdown';
+export const TEXT_EXTENSIONS = new Set(['txt', 'md', 'text']);
